@@ -1,0 +1,12 @@
+# Run one watch pass: review open dify pull requests assigned to you and
+# answer @dify-codereview mentions. Reads TYPESAFE_API_KEY / JEV_BASE_URL
+# (and optionally GITHUB_TOKEN) from the repository's .env; without
+# GITHUB_TOKEN it uses `gh auth token`.
+[Unit]
+Description=dify-codereview watch pass
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/gitproject/dify-review
+ExecStart=%h/gitproject/dify-review/target/release/dify-review watch --assignee asukaminato0721 --since 1h --post

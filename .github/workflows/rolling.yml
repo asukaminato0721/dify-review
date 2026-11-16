@@ -1,0 +1,30 @@
+# Build on every push to main and publish the binary to the `rolling`
+# release, so anything that runs dify-review downloads it instead of
+# compiling:  gh release download rolling -R OWNER/dify-review -p 'dify-review-x86_64-linux*'
+name: rolling
+on:
+  push: {branches: [main]}
+  workflow_dispatch:
+permissions: {contents: write}
+concurrency: {group: rolling, cancel-in-progress: true}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      - run: cargo build --release --locked -p dify-review
+      - name: Publish to the rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp target/release/dify-review dify-review-x86_64-linux
+          sha256sum dify-review-x86_64-linux > dify-review-x86_64-linux.sha256
+          git tag -f rolling
+          git push -f origin rolling
+          gh release view rolling >/dev/null 2>&1 \
+            || gh release create rolling --prerelease --title rolling --notes "Rebuilt on every push to main."
+          gh release upload rolling dify-review-x86_64-linux dify-review-x86_64-linux.sha256 --clobber
+          gh release edit rolling --notes "Built from ${GITHUB_SHA} on every push to main."

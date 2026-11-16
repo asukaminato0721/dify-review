@@ -1,0 +1,11 @@
+# Every 15 minutes; --since 1h in the service overlaps passes on purpose
+# (heads and mentions are only handled once).
+[Unit]
+Description=dify-codereview watch every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target
