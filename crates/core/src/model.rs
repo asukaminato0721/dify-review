@@ -25,6 +25,7 @@ const BOT_LOGINS: &[&str] = &[
     "sourcery-ai",
     "greptile-apps",
     "dify-review",
+    "dify-codereview",
 ];
 
 /// `OWNER/NAME`, validated once at the edge.

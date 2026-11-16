@@ -17,7 +17,7 @@ arXiv:2605.30208): typed signals, thresholds calibrated on history, fail closed.
 | Distill threads into rules | `scripts/distill_v1.py` (one-off) | done: `rules/*.toml` |
 | Review one pull request | `dify-review review --pr N [--post]` | done (dry run by default) |
 | Backtest and calibrate thresholds | `dify-review backtest [--apply]` | done: `backtest/report.md` |
-| Scheduled review of open pull requests | GitHub Actions cron | planned |
+| Watch assigned and mentioned pull requests | `dify-review watch --assignee LOGIN [--post]` | done; scheduling next |
 
 ## Collect
 
@@ -92,3 +92,26 @@ also matches unchanged lines of a touched hunk (asking the author to fix code
 next to their change); the default `added` matches added lines only. The
 report lists every missed comment with Jev's answer, to tell a bad question
 from a bad label.
+
+## Watch
+
+```sh
+cargo run --release -- watch --assignee asukaminato0721 --since 2h          # dry run
+cargo run --release -- watch --assignee asukaminato0721 --since 2h --post   # post
+```
+
+One pass over the pull requests the bot should look at; run it on a
+schedule, with `--since` a little longer than the interval:
+
+- open pull requests assigned to `--assignee` and updated since `--since`.
+  Each head is reviewed once (the review summary records it), so a new push
+  gets a new review and an unchanged head is left alone; drafts wait.
+- pull requests where an OWNER, MEMBER or COLLABORATOR mentions
+  `@dify-codereview` (the handle follows Meta's `meta-codesync`): each
+  mention is answered once, even on a head already reviewed, and always gets
+  a reply, if only "nothing to flag".
+
+A new comment needs a score 0.05 above its rule's threshold, since Jev's
+scores move a little between calls. A rule leaves at most two comments per
+pull request. Posted with a GitHub App's token, the bot appears as
+`dify-codereview[bot]`.

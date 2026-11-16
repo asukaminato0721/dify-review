@@ -4,9 +4,11 @@
 use std::collections::HashSet;
 
 use anyhow::{Context, Result};
+use dify_review_core::MARKER;
 use dify_review_core::Repo;
 use dify_review_core::diff::{Hunk, NewLine, parse_patch};
-use dify_review_core::review::marker_keys;
+use dify_review_core::review::{marker_keys, marker_values, mentions};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -179,4 +181,189 @@ pub async fn post_review(
         &json!({ "commit_id": pr.head, "event": "COMMENT", "body": summary, "comments": comments }),
     )
     .await
+}
+
+#[derive(Deserialize)]
+struct RawReview {
+    #[serde(default)]
+    body: Option<String>,
+}
+
+/// What earlier dify-review summaries on this pull request record: the
+/// heads already judged and the trigger comments already answered.
+#[derive(Debug, Default)]
+pub struct History {
+    pub heads: HashSet<String>,
+    pub triggers: HashSet<u64>,
+}
+
+pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
+    let reviews: Vec<RawReview> = gh
+        .get_all(&format!("/repos/{repo}/pulls/{number}/reviews"))
+        .await?;
+    let bodies: Vec<String> = reviews.into_iter().filter_map(|r| r.body).collect();
+    Ok(History {
+        heads: bodies
+            .iter()
+            .flat_map(|b| marker_values(b, "head"))
+            .collect(),
+        triggers: bodies
+            .iter()
+            .flat_map(|b| marker_values(b, "trigger"))
+            .filter_map(|t| t.parse().ok())
+            .collect(),
+    })
+}
+
+/// A comment that asks for a review.
+#[derive(Debug, Clone)]
+pub struct Trigger {
+    pub comment_id: u64,
+    pub pr: u64,
+    pub author: String,
+    pub url: String,
+    pub at: Timestamp,
+}
+
+#[derive(Deserialize)]
+struct RawUser {
+    login: String,
+}
+
+/// A pull request conversation comment (issues API) or an inline review
+/// comment (pulls API); the URL that names the pull request differs.
+#[derive(Deserialize)]
+struct RawAnyComment {
+    id: u64,
+    body: String,
+    html_url: String,
+    author_association: String,
+    updated_at: Timestamp,
+    user: Option<RawUser>,
+    #[serde(default)]
+    issue_url: Option<String>,
+    #[serde(default)]
+    pull_request_url: Option<String>,
+}
+
+/// Associations allowed to summon the bot: people with a say in the repo.
+const TRUSTED: &[&str] = &["OWNER", "MEMBER", "COLLABORATOR"];
+
+/// Comments updated since `since` on pull requests that mention `handle`,
+/// written by a trusted member, oldest first. dify-review's own comments
+/// (they carry the marker) never trigger.
+pub async fn triggers_since(
+    gh: &GitHub,
+    repo: &Repo,
+    since: Timestamp,
+    handle: &str,
+) -> Result<Vec<Trigger>> {
+    let query = format!("since={since}&sort=updated&direction=asc");
+    let conversation: Vec<RawAnyComment> = gh
+        .get_all(&format!("/repos/{repo}/issues/comments?{query}"))
+        .await?;
+    let inline: Vec<RawAnyComment> = gh
+        .get_all(&format!("/repos/{repo}/pulls/comments?{query}"))
+        .await?;
+    Ok(select_triggers(
+        conversation.into_iter().chain(inline),
+        handle,
+    ))
+}
+
+fn select_triggers(comments: impl Iterator<Item = RawAnyComment>, handle: &str) -> Vec<Trigger> {
+    let mut found: Vec<Trigger> = comments
+        .filter(|c| c.html_url.contains("/pull/"))
+        .filter(|c| TRUSTED.contains(&c.author_association.as_str()))
+        .filter(|c| !c.body.contains(MARKER) && mentions(&c.body, handle))
+        .filter_map(|c| {
+            let pr = c
+                .issue_url
+                .as_deref()
+                .or(c.pull_request_url.as_deref())
+                .and_then(|u| u.rsplit('/').next())
+                .and_then(|n| n.parse().ok())?;
+            Some(Trigger {
+                comment_id: c.id,
+                pr,
+                author: c.user.map(|u| u.login).unwrap_or_default(),
+                url: c.html_url,
+                at: c.updated_at,
+            })
+        })
+        .collect();
+    found.sort_by_key(|t| t.at);
+    found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn comment(id: u64, assoc: &str, body: &str, url: &str) -> RawAnyComment {
+        serde_json::from_value(serde_json::json!({
+            "id": id, "body": body, "html_url": url, "author_association": assoc,
+            "updated_at": format!("2026-11-16T0{id}:00:00Z"), "user": {"login": "someone"},
+            "issue_url": "https://api.github.com/repos/o/r/issues/123",
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn only_trusted_mentions_on_pull_requests_trigger() {
+        let pr = "https://github.com/o/r/pull/123#issuecomment-1";
+        let got = select_triggers(
+            [
+                comment(1, "MEMBER", "@dify-codereview please", pr),
+                comment(2, "CONTRIBUTOR", "@dify-codereview please", pr),
+                comment(
+                    3,
+                    "MEMBER",
+                    "@dify-codereview on an issue",
+                    "https://github.com/o/r/issues/9#c",
+                ),
+                comment(4, "OWNER", "no mention here", pr),
+                comment(5, "MEMBER", "@dify-codereview-bot", pr),
+                comment(
+                    6,
+                    "COLLABORATOR",
+                    "x <!-- dify-review:head=a --> @dify-codereview",
+                    pr,
+                ),
+                comment(7, "COLLABORATOR", "again @dify-codereview", pr),
+            ]
+            .into_iter(),
+            "@dify-codereview",
+        );
+        let ids: Vec<u64> = got.iter().map(|t| t.comment_id).collect();
+        assert_eq!(ids, vec![1, 7]);
+        assert!(got.iter().all(|t| t.pr == 123));
+    }
+}
+
+#[derive(Deserialize)]
+struct RawIssue {
+    number: u64,
+    /// Present only when the issue is a pull request.
+    #[serde(default)]
+    pull_request: Option<serde_json::Value>,
+}
+
+/// Open pull requests assigned to `login` and updated since `since`.
+pub async fn assigned_open(
+    gh: &GitHub,
+    repo: &Repo,
+    login: &str,
+    since: Timestamp,
+) -> Result<Vec<u64>> {
+    let issues: Vec<RawIssue> = gh
+        .get_all(&format!(
+            "/repos/{repo}/issues?assignee={login}&state=open&since={since}"
+        ))
+        .await?;
+    Ok(issues
+        .into_iter()
+        .filter(|i| i.pull_request.is_some())
+        .map(|i| i.number)
+        .collect())
 }

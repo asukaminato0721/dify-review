@@ -135,7 +135,7 @@ impl Finding {
             .map(|u| format!(" Learned from [an earlier review]({u})."))
             .unwrap_or_default();
         format!(
-            "{}\n\n<sub>dify-review · `{}`{}{} Reply here if this is wrong.</sub>\n{}:rule={};key={} -->",
+            "{}\n\n<sub>dify-codereview · `{}`{}{} Reply here if this is wrong.</sub>\n{}:rule={};key={} -->",
             self.verdict.comment,
             self.rule,
             self.verdict
@@ -153,16 +153,53 @@ impl Finding {
 
 /// The dedupe keys in a comment body dify-review posted earlier.
 pub fn marker_keys(body: &str) -> Vec<String> {
+    marker_values(body, "key")
+}
+
+/// Values of `field` in every `<!-- dify-review:a=1;b=2 -->` marker of a body.
+pub fn marker_values(body: &str, field: &str) -> Vec<String> {
+    let prefix = format!("{field}=");
     body.match_indices(MARKER)
         .filter_map(|(i, _)| {
             let rest = &body[i + MARKER.len()..];
             let end = rest.find("-->")?;
             rest[..end]
+                .trim_start_matches(':')
                 .split(';')
-                .find_map(|kv| kv.trim().strip_prefix("key="))
-                .map(|k| k.trim().to_owned())
+                .find_map(|kv| kv.trim().strip_prefix(prefix.as_str()))
+                .map(|v| v.trim().to_owned())
         })
         .collect()
+}
+
+/// A new comment needs a score this far above the rule's threshold. Jev's
+/// probabilities move a little between identical calls; without a margin a
+/// borderline hunk comments on one run and not the next.
+pub const NEW_COMMENT_MARGIN: f64 = 0.05;
+
+/// The bar a new comment must reach under `rule`.
+pub fn posting_threshold(rule: &Rule) -> f64 {
+    (rule.threshold + NEW_COMMENT_MARGIN).min(1.0)
+}
+
+/// Marker for a review summary: the head it judged and, when someone asked
+/// for it, the comment that asked.
+pub fn summary_marker(head: &str, trigger: Option<u64>) -> String {
+    let trigger = trigger.map(|t| format!(";trigger={t}")).unwrap_or_default();
+    format!("{MARKER}:head={head}{trigger} -->")
+}
+
+/// Whether `body` mentions `handle` (e.g. `@dify-review`) as a whole word:
+/// not inside an e-mail address and not as the prefix of a longer handle.
+pub fn mentions(body: &str, handle: &str) -> bool {
+    let word = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
+    let lower = body.to_ascii_lowercase();
+    let handle = handle.to_ascii_lowercase();
+    lower.match_indices(&handle).any(|(i, _)| {
+        let before = lower[..i].chars().next_back();
+        let after = lower[i + handle.len()..].chars().next();
+        !before.is_some_and(word) && !after.is_some_and(word)
+    })
 }
 
 /// FNV-1a: a small hash that is stable across Rust versions and platforms.
@@ -240,6 +277,23 @@ mod tests {
         assert!(!passes_gate(&gated("added"), &hunk));
         assert!(passes_gate(&gated("hunk"), &hunk));
         assert_eq!(anchor(&gated("hunk"), &hunk).unwrap().0, NewLine(1));
+    }
+
+    #[test]
+    fn mention_is_a_whole_handle() {
+        assert!(mentions("@dify-review please", "@dify-review"));
+        assert!(mentions("cc @Dify-Review.", "@dify-review"));
+        assert!(!mentions("@dify-review-bot", "@dify-review"));
+        assert!(!mentions("ops@dify-review", "@dify-review"));
+        assert!(!mentions("dify-review", "@dify-review"));
+    }
+
+    #[test]
+    fn summary_marker_round_trips() {
+        let body = format!("text\n{}", summary_marker("abc123", Some(42)));
+        assert_eq!(marker_values(&body, "head"), vec!["abc123".to_owned()]);
+        assert_eq!(marker_values(&body, "trigger"), vec!["42".to_owned()]);
+        assert!(marker_values(&summary_marker("abc", None), "trigger").is_empty());
     }
 
     #[test]

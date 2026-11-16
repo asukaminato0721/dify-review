@@ -10,6 +10,7 @@ use dify_review_github::{GitHub, collect};
 
 mod backtest;
 mod review;
+mod watch;
 
 #[derive(Parser)]
 #[command(
@@ -29,6 +30,8 @@ enum Cmd {
     Review(review::ReviewArgs),
     /// Measure each rule against labelled review history and suggest thresholds.
     Backtest(backtest::BacktestArgs),
+    /// Review the pull requests where a member mentioned @dify-codereview (one pass).
+    Watch(watch::WatchArgs),
 }
 
 #[derive(clap::Args)]
@@ -67,6 +70,7 @@ async fn main() -> Result<()> {
         Cmd::Collect(args) => run_collect(args).await,
         Cmd::Review(args) => review::run(args).await,
         Cmd::Backtest(args) => backtest::run(args).await,
+        Cmd::Watch(args) => watch::run(args).await,
     }
 }
 
