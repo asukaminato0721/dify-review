@@ -367,3 +367,51 @@ pub async fn assigned_open(
         .map(|i| i.number)
         .collect())
 }
+
+/// An inline comment dify-review posted.
+#[derive(Debug, Clone)]
+pub struct PostedComment {
+    pub id: u64,
+    pub url: String,
+    pub body: String,
+}
+
+#[derive(Deserialize)]
+struct RawPostedComment {
+    id: u64,
+    html_url: String,
+    body: String,
+}
+
+/// Every dify-review inline comment in the repository updated since `since`.
+pub async fn bot_comments_since(
+    gh: &GitHub,
+    repo: &Repo,
+    since: Timestamp,
+) -> Result<Vec<PostedComment>> {
+    let all: Vec<RawPostedComment> = gh
+        .get_all(&format!(
+            "/repos/{repo}/pulls/comments?since={since}&sort=updated&direction=asc"
+        ))
+        .await?;
+    Ok(all
+        .into_iter()
+        .filter(|c| !marker_values(&c.body, "rule").is_empty())
+        .map(|c| PostedComment {
+            id: c.id,
+            url: c.html_url,
+            body: c.body,
+        })
+        .collect())
+}
+
+/// Replace a review comment's body.
+pub async fn edit_comment(gh: &GitHub, repo: &Repo, id: u64, body: &str) -> Result<()> {
+    let _: serde_json::Value = gh
+        .patch(
+            &format!("/repos/{repo}/pulls/comments/{id}"),
+            &serde_json::json!({ "body": body }),
+        )
+        .await?;
+    Ok(())
+}

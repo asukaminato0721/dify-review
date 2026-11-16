@@ -116,3 +116,13 @@ A new comment needs a score 0.05 above its rule's threshold, since Jev's
 scores move a little between calls. A rule leaves at most two comments per
 pull request. Posted with a GitHub App's token, the bot appears as
 `dify-codereview[bot]`.
+
+## Refresh
+
+```sh
+cargo run --release -- refresh --since 30d           # list comments whose wording is out of date
+cargo run --release -- refresh --since 30d --apply   # rewrite them
+```
+
+After a rule's comment text changes, rewrites the text of comments already
+posted from it. Footer and marker stay, so dedupe and feedback still match.

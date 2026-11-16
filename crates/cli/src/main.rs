@@ -10,6 +10,7 @@ use dify_review_github::{GitHub, collect};
 
 mod backtest;
 mod feedback;
+mod refresh;
 mod review;
 mod watch;
 
@@ -35,6 +36,8 @@ enum Cmd {
     Watch(watch::WatchArgs),
     /// Judge what became of the comments dify-review posted (for backtest).
     Feedback(feedback::FeedbackArgs),
+    /// Rewrite posted comments to the current rule wording.
+    Refresh(refresh::RefreshArgs),
 }
 
 #[derive(clap::Args)]
@@ -75,6 +78,7 @@ async fn main() -> Result<()> {
         Cmd::Backtest(args) => backtest::run(args).await,
         Cmd::Watch(args) => watch::run(args).await,
         Cmd::Feedback(args) => feedback::run(args).await,
+        Cmd::Refresh(args) => refresh::run(args).await,
     }
 }
 

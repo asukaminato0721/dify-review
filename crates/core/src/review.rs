@@ -207,6 +207,35 @@ pub fn mentions(body: &str, handle: &str) -> bool {
     })
 }
 
+/// The body a posted comment should have under the current rules: its text
+/// replaced by the rule's (or option's) comment, footer and marker kept, so
+/// dedupe and feedback still match. None when nothing changes, or when its
+/// rule or option no longer exists or no longer comments.
+pub fn refreshed_body(body: &str, rules: &[Rule]) -> Option<String> {
+    let rule_id = marker_values(body, "rule").into_iter().next()?;
+    let option = marker_values(body, "option")
+        .into_iter()
+        .next()
+        .or_else(|| {
+            body.split(&format!("`{rule_id}` ("))
+                .nth(1)?
+                .split(')')
+                .next()
+                .map(str::to_owned)
+        });
+    let rule = rules.iter().find(|r| r.id.0 == rule_id)?;
+    let text = match (&rule.judge, option) {
+        (Judge::Noul { comment, .. }, _) => comment.clone(),
+        (Judge::Choice { options, .. }, Some(o)) => options
+            .iter()
+            .find(|opt| opt.name.0 == o)
+            .and_then(|opt| opt.comment.clone())?,
+        (Judge::Choice { .. }, None) => None?,
+    };
+    let (old, rest) = body.split_once("\n\n<sub>")?;
+    (old != text).then(|| format!("{text}\n\n<sub>{rest}"))
+}
+
 /// FNV-1a: a small hash that is stable across Rust versions and platforms.
 pub fn fnv1a(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| {
@@ -299,6 +328,24 @@ mod tests {
         assert_eq!(marker_values(&body, "head"), vec!["abc123".to_owned()]);
         assert_eq!(marker_values(&body, "trigger"), vec!["42".to_owned()]);
         assert!(marker_values(&summary_marker("abc", None), "trigger").is_empty());
+    }
+
+    #[test]
+    fn refresh_swaps_only_the_text() {
+        let (rules, hunk) = setup();
+        let v = decide(&rules[0], &hunk, &Answer::Noul(0.9)).unwrap();
+        let body = Finding::new(&rules[0], "api/x.py", &hunk, v)
+            .unwrap()
+            .body();
+        assert_eq!(refreshed_body(&body, &rules), None);
+        let stale = body.replacen("Fix the type.", "Old wording.", 1);
+        let fresh = refreshed_body(&stale, &rules).unwrap();
+        assert_eq!(fresh, body);
+        assert_eq!(marker_keys(&fresh), marker_keys(&body));
+        assert_eq!(
+            refreshed_body(&stale.replace("rule=no-type-ignore", "rule=gone"), &rules),
+            None
+        );
     }
 
     #[test]
