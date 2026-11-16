@@ -1,0 +1,17 @@
+{"data":{"rateLimit":{"cost":1,"remaining":4990,"resetAt":"2026-11-16T13:00:00Z"},
+ "repository":{"pullRequests":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+  {"id":"PR_1","number":101,"url":"https://github.com/o/r/pull/101","title":"test: add types","state":"MERGED",
+   "createdAt":"2026-11-01T00:00:00Z","updatedAt":"2026-11-02T00:00:00Z","mergedAt":"2026-11-02T00:00:00Z",
+   "author":{"login":"author"},
+   "reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+    {"id":"T_1","isResolved":false,"isOutdated":true,"path":"api/tests/unit_tests/test_x.py","line":null,"originalLine":12,"diffSide":"RIGHT",
+     "comments":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+      {"databaseId":1,"body":".","createdAt":"2026-11-01T01:00:00Z","diffHunk":"@@ -10,3 +10,3 @@\n-    repo.side_effect = [x, []]\n+    repo.side_effect = [x, list[object]()]","url":"https://github.com/o/r/pull/101#discussion_r1","author":{"__typename":"User","login":"reviewer"}},
+      {"databaseId":2,"body":"Typed the factory instead in abc123","createdAt":"2026-11-01T02:00:00Z","diffHunk":"@@ -10,3 +10,3 @@","url":"https://github.com/o/r/pull/101#discussion_r2","author":{"__typename":"User","login":"author"}}
+     ]}},
+    {"id":"T_2","isResolved":false,"isOutdated":false,"path":"api/core/x.py","line":5,"originalLine":5,"diffSide":"RIGHT",
+     "comments":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+      {"databaseId":3,"body":"Possible SQL injection","createdAt":"2026-11-01T03:00:00Z","diffHunk":"@@ -1,5 +1,5 @@","url":"https://github.com/o/r/pull/101#discussion_r3","author":{"__typename":"Bot","login":"github-advanced-security"}}
+     ]}}
+   ]}}
+ ]}}}}
