@@ -149,6 +149,13 @@ impl GitHub {
         Ok(items)
     }
 
+    /// DELETE a REST resource; the reply is ignored.
+    pub async fn delete(&self, path: &str) -> Result<()> {
+        self.send(Method::DELETE, &format!("{API}{path}"), None)
+            .await?;
+        Ok(())
+    }
+
     /// PUT a REST resource and decode the reply.
     pub async fn put<T: DeserializeOwned>(&self, path: &str, body: &Value) -> Result<T> {
         let page = self

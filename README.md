@@ -104,18 +104,23 @@ cargo run --release -- watch --assignee asukaminato0721 --since 2h --post   # po
 One pass over the pull requests the bot should look at; run it on a
 schedule, with `--since` a little longer than the interval:
 
-- every open pull request assigned to `--assignee`. A new head gets a Jev
-  review, once. A head already reviewed only gets the cheap checks, each
-  flagged once per head: a merge conflict (asking for a rebase) and failing
-  GitHub Actions jobs (linked; codecov and other apps' checks are left out).
-  Both change without touching the pull request's update time, so every
-  assigned pull request is looked at on each pass. Drafts wait.
-  Before reviewing a new head, the bot resolves its own comments the push
-  made outdated. The review requests changes when there is a new
-  suggestion, an unresolved review thread (anyone's), a merge conflict or
-  failing CI; otherwise it says nothing is left to flag and dismisses its
-  earlier change requests. On the author's own pull request GitHub allows
-  no change request, so it comments instead.
+- every open pull request assigned to `--assignee`. Status lives in two
+  labels, after pyrefly's: `waiting-for-author` (a new suggestion, an
+  unresolved review thread by anyone, a merge conflict or failing CI) and
+  `waiting-for-reviewer` (nothing left for the author). A head is judged
+  once: when a review names it, or a status label was set after it arrived
+  (its commit date, a force-push, or its first CI run, whichever is latest;
+  the label is re-set to refresh that time). A new head gets a Jev review;
+  a judged head only gets cheap checks each pass (merge conflict, failing
+  GitHub Actions jobs, unresolved threads) to keep the label right. Drafts
+  wait.
+  A review is posted only when the author must act: new suggestions, a
+  merge conflict (asking for a rebase) or failing CI (linked), each
+  requesting changes and each flagged once per head. When the author's
+  turn ends with the bot still requesting changes, it says nothing is left
+  to flag and dismisses that request. Before reviewing a new head, the bot
+  resolves its own comments the push made outdated. On the author's own
+  pull request GitHub allows no change request, so it comments instead.
 - pull requests where an OWNER, MEMBER or COLLABORATOR mentions
   `@dify-codereview` (the handle follows Meta's `meta-codesync`): each
   mention is answered once, even on a head already reviewed, and always gets

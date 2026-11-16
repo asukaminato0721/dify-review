@@ -32,6 +32,7 @@ pub struct PullRequest {
     /// GitHub's `mergeable_state`; "dirty" means a merge conflict. Unknown
     /// (None) while GitHub is still computing it.
     pub mergeable_state: Option<String>,
+    pub labels: Vec<String>,
 }
 
 impl PullRequest {
@@ -59,6 +60,13 @@ struct RawPr {
     user: RawUser,
     #[serde(default)]
     mergeable_state: Option<String>,
+    #[serde(default)]
+    labels: Vec<RawLabel>,
+}
+
+#[derive(Deserialize)]
+struct RawLabel {
+    name: String,
 }
 
 #[derive(Deserialize)]
@@ -97,6 +105,7 @@ pub async fn pull_request(gh: &GitHub, repo: &Repo, number: u64) -> Result<PullR
         open: pr.state == "open",
         draft: pr.draft,
         mergeable_state: pr.mergeable_state,
+        labels: pr.labels.into_iter().map(|l| l.name).collect(),
     })
 }
 
@@ -358,6 +367,19 @@ mod tests {
             "issue_url": "https://api.github.com/repos/o/r/issues/123",
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn judged_when_labelled_after_the_head_arrived() {
+        let t = |s: &str| -> Timestamp { s.parse().unwrap() };
+        let stamp = |head: Option<&str>, label: Option<&str>| StatusStamp {
+            head_arrived: head.map(t),
+            labelled: label.map(t),
+        };
+        assert!(stamp(Some("2026-11-16T10:00:00Z"), Some("2026-11-16T10:05:00Z")).judged());
+        assert!(!stamp(Some("2026-11-16T10:05:00Z"), Some("2026-11-16T10:00:00Z")).judged());
+        assert!(!stamp(Some("2026-11-16T10:00:00Z"), None).judged());
+        assert!(!stamp(None, Some("2026-11-16T10:00:00Z")).judged());
     }
 
     #[test]
@@ -736,4 +758,165 @@ pub async fn failing_checks(
     failing.sort_by(|a, b| a.name.cmp(&b.name));
     failing.dedup_by(|a, b| a.name == b.name);
     Ok(failing)
+}
+
+/// Status labels, after pyrefly's: whose turn it is on the pull request.
+pub const WAITING_FOR_AUTHOR: &str = "waiting-for-author";
+pub const WAITING_FOR_REVIEWER: &str = "waiting-for-reviewer";
+const STATUS_LABELS: [&str; 2] = [WAITING_FOR_AUTHOR, WAITING_FOR_REVIEWER];
+
+/// Set the status label. It is removed and added again even when already
+/// there, so the label event's time records when the head was judged.
+pub async fn set_status(gh: &GitHub, repo: &Repo, pr: &PullRequest, label: &str) -> Result<()> {
+    for old in pr
+        .labels
+        .iter()
+        .filter(|l| STATUS_LABELS.contains(&l.as_str()))
+    {
+        gh.delete(&format!("/repos/{repo}/issues/{}/labels/{old}", pr.number))
+            .await?;
+    }
+    let _: serde_json::Value = gh
+        .post(
+            &format!("/repos/{repo}/issues/{}/labels", pr.number),
+            &json!({ "labels": [label] }),
+        )
+        .await?;
+    Ok(())
+}
+
+const STAMP_QUERY: &str = r#"
+query($owner: String!, $name: String!, $number: Int!) {
+  rateLimit { cost remaining resetAt }
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      commits(last: 1) { nodes { commit { committedDate } } }
+      timelineItems(last: 100, itemTypes: [LABELED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT]) {
+        nodes {
+          __typename
+          ... on LabeledEvent { createdAt label { name } }
+          ... on HeadRefForcePushedEvent { createdAt }
+        }
+      }
+    }
+  }
+}
+"#;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StampData {
+    rate_limit: Option<crate::client::RateLimit>,
+    repository: Option<StampRepo>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StampRepo {
+    pull_request: Option<StampPr>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StampPr {
+    commits: StampCommits,
+    timeline_items: StampItems,
+}
+#[derive(Deserialize)]
+struct StampCommits {
+    nodes: Vec<StampCommitNode>,
+}
+#[derive(Deserialize)]
+struct StampCommitNode {
+    commit: StampCommit,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StampCommit {
+    committed_date: Timestamp,
+}
+#[derive(Deserialize)]
+struct StampItems {
+    nodes: Vec<StampItem>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StampItem {
+    #[serde(rename = "__typename")]
+    kind: String,
+    created_at: Option<Timestamp>,
+    #[serde(default)]
+    label: Option<RawLabel>,
+}
+
+impl crate::client::HasRateLimit for StampData {
+    fn rate_limit(&self) -> Option<&crate::client::RateLimit> {
+        self.rate_limit.as_ref()
+    }
+}
+
+#[derive(Deserialize)]
+struct RawCheckSuites {
+    check_suites: Vec<RawCheckSuite>,
+}
+#[derive(Deserialize)]
+struct RawCheckSuite {
+    created_at: Timestamp,
+}
+
+/// When the current head arrived, and when a status label was last set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StatusStamp {
+    /// The latest of: the head commit's date, the last force-push, and the
+    /// first CI check suite on the head (created when it was pushed, which
+    /// catches commits made long before they were pushed).
+    pub head_arrived: Option<Timestamp>,
+    pub labelled: Option<Timestamp>,
+}
+
+impl StatusStamp {
+    /// A status label was set after the head arrived: the head was judged.
+    pub fn judged(&self) -> bool {
+        matches!((self.head_arrived, self.labelled), (Some(h), Some(l)) if l >= h)
+    }
+}
+
+pub async fn status_stamp(gh: &GitHub, repo: &Repo, pr: &PullRequest) -> Result<StatusStamp> {
+    let d: StampData = gh
+        .query(
+            STAMP_QUERY,
+            json!({ "owner": repo.owner(), "name": repo.name(), "number": pr.number }),
+        )
+        .await?;
+    let p = d
+        .repository
+        .and_then(|r| r.pull_request)
+        .with_context(|| format!("pull request {} not found", pr.number))?;
+    let committed = p.commits.nodes.last().map(|n| n.commit.committed_date);
+    let latest = |kind: &str, pick: &dyn Fn(&StampItem) -> bool| {
+        p.timeline_items
+            .nodes
+            .iter()
+            .filter(|i| i.kind == kind && pick(i))
+            .filter_map(|i| i.created_at)
+            .max()
+    };
+    let force_pushed = latest("HeadRefForcePushedEvent", &|_| true);
+    let labelled = latest("LabeledEvent", &|i| {
+        i.label
+            .as_ref()
+            .is_some_and(|l| STATUS_LABELS.contains(&l.name.as_str()))
+    });
+    let suites: RawCheckSuites = gh
+        .get(&format!(
+            "/repos/{repo}/commits/{}/check-suites?per_page=100",
+            pr.head.0
+        ))
+        .await?;
+    let first_ci = suites.check_suites.iter().map(|s| s.created_at).min();
+    Ok(StatusStamp {
+        head_arrived: [committed, force_pushed, first_ci]
+            .into_iter()
+            .flatten()
+            .max(),
+        labelled,
+    })
 }

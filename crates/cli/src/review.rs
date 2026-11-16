@@ -3,10 +3,7 @@
 //! `watch`, which reviews the pull requests someone mentioned the bot on.
 
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Mutex;
 
 use anyhow::Result;
 use dify_review_core::Repo;
@@ -56,9 +53,6 @@ pub struct ReviewOpts {
     /// Post the review. Without this flag nothing is written to GitHub.
     #[arg(long)]
     post: bool,
-    /// Heads reviewed without posting anything, so they are not judged again.
-    #[arg(long, default_value = "data/reviewed-heads.txt")]
-    state: PathBuf,
 }
 
 pub async fn run(a: ReviewArgs) -> Result<()> {
@@ -72,8 +66,6 @@ pub struct Reviewer {
     jev: Option<Jev>,
     rules: RuleSet,
     opts: ReviewOpts,
-    /// Heads reviewed without a posted review (see `remember`).
-    reviewed: Mutex<HashSet<String>>,
 }
 
 /// Who asked for a review, if someone did.
@@ -100,19 +92,7 @@ impl Reviewer {
             ),
         }
         let gh = GitHub::from_env().await?;
-        let reviewed = match opts.state.exists() {
-            true => fs::read_to_string(&opts.state)?
-                .lines()
-                .map(|l| l.trim().to_owned())
-                .filter(|l| !l.is_empty())
-                .collect(),
-            false => HashSet::new(),
-        };
-        if let Some(dir) = opts.state.parent().filter(|d| !d.as_os_str().is_empty()) {
-            fs::create_dir_all(dir)?;
-        }
         Ok(Self {
-            reviewed: Mutex::new(reviewed),
             gh,
             repo,
             jev,
@@ -127,12 +107,10 @@ impl Reviewer {
     pub async fn review(&self, number: u64, ask: Option<Ask<'_>>, force: bool) -> Result<()> {
         let pr = pr::pull_request(&self.gh, &self.repo, number).await?;
         let history = pr::history(&self.gh, &self.repo, number).await?;
+        // Judged before: a posted review names this head, or a status label
+        // was set after it arrived.
         let seen = history.heads.contains(&pr.head.0)
-            || self
-                .reviewed
-                .lock()
-                .expect("reviewed-heads lock")
-                .contains(&pr.head.0);
+            || (pr.open && pr::status_stamp(&self.gh, &self.repo, &pr).await?.judged());
         let asked = force || ask.is_some();
         match (seen, asked) {
             _ if !pr.open => {
@@ -156,44 +134,86 @@ impl Reviewer {
     /// finished and failed; each is flagged once per head.
     async fn recheck(&self, pr: &PullRequest, history: &pr::History) -> Result<()> {
         let head = &pr.head.0;
-        let conflict = pr.conflicted() && !history.conflicts.contains(head);
-        let failing = match history.ci.contains(head) {
-            true => Vec::new(),
-            false => pr::failing_checks(&self.gh, &self.repo, &pr.head).await?,
-        };
-        match (conflict, failing.is_empty()) {
-            (false, true) => {
-                eprintln!(
-                    "PR #{}: head {} already reviewed, nothing new",
-                    pr.number,
-                    short(head)
-                );
-                Ok(())
-            }
-            _ => {
+        let failing = pr::failing_checks(&self.gh, &self.repo, &pr.head).await?;
+        let new_conflict = pr.conflicted() && !history.conflicts.contains(head);
+        let new_ci = !failing.is_empty() && !history.ci.contains(head);
+        match new_conflict || new_ci {
+            // Something the author must act on appeared since the review.
+            true => {
                 eprintln!(
                     "PR #{}: head {}{}{}",
                     pr.number,
                     short(head),
-                    if conflict { " now conflicts" } else { "" },
-                    if failing.is_empty() {
-                        ""
-                    } else {
-                        ", CI failing"
-                    }
+                    if new_conflict { " now conflicts" } else { "" },
+                    if new_ci { ", CI failing" } else { "" }
                 );
-                let ci = ci_list(&failing);
+                let ci = ci_list(&failing).filter(|_| new_ci);
                 let facts = SummaryFacts {
                     head,
                     new: 0,
                     still_open: 0,
-                    conflict_base: conflict.then_some(pr.base_ref.as_str()),
+                    conflict_base: new_conflict.then_some(pr.base_ref.as_str()),
                     ci_failing: ci.as_deref(),
                     requester: None,
                     trigger: None,
                 };
                 self.post(pr, &facts, &[], ReviewEvent::RequestChanges)
-                    .await
+                    .await?;
+                self.label(pr, pr::WAITING_FOR_AUTHOR).await
+            }
+            // Nothing new: keep the status label in step with the pull request.
+            false => self.restatus(pr, &failing).await,
+        }
+    }
+
+    /// Whose turn it is on a head already judged: the author's while a
+    /// thread is unresolved, it conflicts, or CI fails; else the reviewer's.
+    /// When it turns to the reviewer and the bot still requests changes,
+    /// say nothing is left and lift that request.
+    async fn restatus(&self, pr: &PullRequest, failing: &[pr::FailingCheck]) -> Result<()> {
+        let threads = pr::review_threads(&self.gh, &self.repo, pr.number).await?;
+        let unresolved = threads
+            .iter()
+            .filter(|t| !t.resolved && !(t.bot && t.outdated))
+            .count();
+        let author_turn = unresolved > 0 || pr.conflicted() || !failing.is_empty();
+        let status = match author_turn {
+            true => pr::WAITING_FOR_AUTHOR,
+            false => pr::WAITING_FOR_REVIEWER,
+        };
+        match pr.labels.iter().any(|l| l == status) {
+            true => {
+                eprintln!(
+                    "PR #{}: head {} already reviewed, still {status}",
+                    pr.number,
+                    short(&pr.head.0)
+                );
+                Ok(())
+            }
+            false => {
+                let standing = match author_turn {
+                    true => Vec::new(),
+                    false => pr::bot_change_requests(&self.gh, &self.repo, pr.number).await?,
+                };
+                if !standing.is_empty() {
+                    let facts = SummaryFacts {
+                        head: &pr.head.0,
+                        new: 0,
+                        still_open: 0,
+                        conflict_base: None,
+                        ci_failing: None,
+                        requester: None,
+                        trigger: None,
+                    };
+                    self.post(pr, &facts, &[], ReviewEvent::Comment).await?;
+                    if self.opts.post {
+                        let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
+                        pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
+                            .await?;
+                        eprintln!("dismissed {} earlier change request(s)", standing.len());
+                    }
+                }
+                self.label(pr, status).await
             }
         }
     }
@@ -319,7 +339,7 @@ impl Reviewer {
         match (act_on, ask.is_some(), clear && !standing.is_empty()) {
             (true, _, _) => {
                 self.post(pr, &facts, &comments, ReviewEvent::RequestChanges)
-                    .await
+                    .await?
             }
             // Everything was dealt with: say so, and lift the earlier change request.
             (false, _, true) => {
@@ -337,39 +357,35 @@ impl Reviewer {
                         }
                     }
                 }
-                Ok(())
             }
-            (false, true, false) => self.post(pr, &facts, &[], ReviewEvent::Comment).await,
-            (false, false, false) => {
-                eprintln!(
-                    "PR #{}: nothing to act on at {}{}; not posting",
-                    pr.number,
-                    short(&pr.head.0),
-                    match still_open {
-                        0 => String::new(),
-                        n => format!(" ({n} unresolved thread(s) remain)"),
-                    }
-                );
-                self.remember(&pr.head.0)
-            }
+            (false, true, false) => self.post(pr, &facts, &[], ReviewEvent::Comment).await?,
+            (false, false, false) => eprintln!(
+                "PR #{}: nothing new to act on at {}{}; label only",
+                pr.number,
+                short(&pr.head.0),
+                match still_open {
+                    0 => String::new(),
+                    n => format!(" ({n} unresolved thread(s) remain)"),
+                }
+            ),
         }
+        // Whose turn it is; the label's time also records that this head was judged.
+        let status = match act_on || !clear {
+            true => pr::WAITING_FOR_AUTHOR,
+            false => pr::WAITING_FOR_REVIEWER,
+        };
+        self.label(pr, status).await
     }
 
-    /// Record a head reviewed without posting, so the next pass does not
-    /// judge it again. Heads with a posted review are recorded in its marker.
-    fn remember(&self, head: &str) -> Result<()> {
+    async fn label(&self, pr: &PullRequest, status: &str) -> Result<()> {
         match self.opts.post {
-            false => Ok(()),
+            false => {
+                eprintln!("dry run: would label PR #{} {status}", pr.number);
+                Ok(())
+            }
             true => {
-                self.reviewed
-                    .lock()
-                    .expect("reviewed-heads lock")
-                    .insert(head.to_owned());
-                let mut f = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&self.opts.state)?;
-                writeln!(f, "{head}")?;
+                pr::set_status(&self.gh, &self.repo, pr, status).await?;
+                eprintln!("labelled PR #{} {status}", pr.number);
                 Ok(())
             }
         }
