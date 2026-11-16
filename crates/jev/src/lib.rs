@@ -136,6 +136,27 @@ impl Jev {
         Ok((answers, resp.usage.unwrap_or_default()))
     }
 
+    /// One yes/no question about a state: the probability of yes.
+    pub async fn noul(&self, state: &Value, question: &str) -> Result<(f64, Usage)> {
+        let body = Request {
+            model: &self.model,
+            state,
+            questions: [(
+                "q".to_owned(),
+                Question::Noul {
+                    instructions: format!("{question}{DATA_ONLY}"),
+                },
+            )]
+            .into(),
+        };
+        let resp = self.send(&body).await?;
+        let usage = resp.usage.unwrap_or_default();
+        match resp.answers.get("q") {
+            Some(RawAnswer::Noul { noul }) => Ok((*noul, usage)),
+            _ => bail!("Jev did not answer the yes/no question"),
+        }
+    }
+
     /// Stable key of the exact request `ask` would send, for caching
     /// answers: changes whenever the model, the state or a question does.
     pub fn fingerprint(&self, state: &Value, rules: &[&Rule]) -> Result<String> {

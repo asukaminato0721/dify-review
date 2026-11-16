@@ -34,6 +34,12 @@ pub struct BacktestArgs {
     /// Full hunks of the labelled comments, fetched once.
     #[arg(long, default_value = "data/backtest-hunks.jsonl")]
     hunks: PathBuf,
+    /// Verdicts on live comments (`dify-review feedback`).
+    #[arg(long, default_value = "backtest/feedback.toml")]
+    feedback: PathBuf,
+    /// The threads behind those verdicts.
+    #[arg(long, default_value = "data/feedback-threads.jsonl")]
+    feedback_threads: PathBuf,
     /// Jev answers by request fingerprint; reruns only ask what changed.
     #[arg(long, default_value = "data/backtest-answers.jsonl")]
     cache: PathBuf,
@@ -70,6 +76,15 @@ struct Pending {
     path: String,
     hunk: Hunk,
     labels: Vec<Label>,
+    rejected: Vec<RuleId>,
+}
+
+/// What is known about one review comment: the rules it is an instance of
+/// (labels, live comments judged right) and the rules judged wrong there.
+#[derive(Default, Clone)]
+struct Marks {
+    labels: Vec<Label>,
+    rejected: Vec<RuleId>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -82,10 +97,14 @@ pub async fn run(a: BacktestArgs) -> Result<()> {
     let rules = RuleSet::load_dir(&a.rules)?;
     let jev = Jev::from_env()?.context("backtest needs Jev: set TYPESAFE_API_KEY")?;
     let labels = load_labels(&a.labels, &rules)?;
-    let threads = load_threads(&a.threads)?;
+    let mut threads = load_threads(&a.threads)?;
+    if a.feedback_threads.exists() {
+        threads.extend(load_threads(&a.feedback_threads)?);
+    }
+    let marks = with_feedback(&labels, &crate::feedback::load(&a.feedback)?, &rules);
 
     let gh = GitHub::from_env().await?;
-    let positives = positive_samples(&gh, &threads, &labels, &a.hunks).await?;
+    let positives = positive_samples(&gh, &threads, &marks, &a.hunks).await?;
     let negatives = negative_samples(&gh, &threads, &labels).await?;
     tracing::info!(
         positives = positives.len(),
@@ -158,6 +177,63 @@ fn load_labels(path: &Path, rules: &RuleSet) -> Result<BTreeMap<String, Vec<Labe
     )
 }
 
+/// Labels plus live verdicts: a comment judged right is a positive with the
+/// option it used; one judged wrong is an explicit negative for its rule.
+/// Verdicts for rules that no longer exist, or right verdicts on a choice
+/// rule without a commenting option, are left out.
+fn with_feedback(
+    labels: &BTreeMap<String, Vec<Label>>,
+    feedback: &crate::feedback::FeedbackFile,
+    rules: &RuleSet,
+) -> BTreeMap<String, Marks> {
+    use dify_review_core::feedback::Outcome;
+    let mut marks: BTreeMap<String, Marks> = labels
+        .iter()
+        .map(|(url, ls)| {
+            (
+                url.clone(),
+                Marks {
+                    labels: ls.clone(),
+                    rejected: Vec::new(),
+                },
+            )
+        })
+        .collect();
+    let by_id: HashMap<&RuleId, &Rule> = rules.rules().iter().map(|r| (&r.id, r)).collect();
+    let usable = |e: &crate::feedback::Entry| match by_id.get(&e.rule).map(|r| &r.judge) {
+        None => false,
+        Some(Judge::Noul { .. }) => true,
+        Some(Judge::Choice { options, .. }) => {
+            e.outcome == Outcome::Wrong
+                || options
+                    .iter()
+                    .any(|o| Some(&o.name) == e.option.as_ref() && o.comment.is_some())
+        }
+    };
+    let (used, skipped): (Vec<_>, Vec<_>) = feedback
+        .feedback
+        .iter()
+        .filter(|e| matches!(e.outcome, Outcome::Right | Outcome::Wrong))
+        .partition(|e| usable(e));
+    if !skipped.is_empty() {
+        tracing::warn!(
+            count = skipped.len(),
+            "feedback for unknown rules or options left out"
+        );
+    }
+    used.into_iter().for_each(|e| {
+        let m = marks.entry(e.comment.clone()).or_default();
+        match e.outcome {
+            Outcome::Right => m.labels.push(Label {
+                rule: e.rule.clone(),
+                option: e.option.clone(),
+            }),
+            _ => m.rejected.push(e.rule.clone()),
+        }
+    });
+    marks
+}
+
 /// Threads keyed by the URL of their first comment.
 fn load_threads(path: &Path) -> Result<HashMap<String, ReviewThread>> {
     let lines =
@@ -187,10 +263,10 @@ fn load_threads(path: &Path) -> Result<HashMap<String, ReviewThread>> {
 async fn positive_samples(
     gh: &GitHub,
     threads: &HashMap<String, ReviewThread>,
-    labels: &BTreeMap<String, Vec<Label>>,
+    marks: &BTreeMap<String, Marks>,
     hunk_cache: &Path,
 ) -> Result<Vec<Pending>> {
-    let wanted = labels
+    let wanted = marks
         .iter()
         .map(|(url, ls)| {
             threads
@@ -252,7 +328,8 @@ async fn positive_samples(
                 title: t.pr.title.clone(),
                 path: t.path.clone(),
                 hunk,
-                labels: ls.clone(),
+                labels: ls.labels.clone(),
+                rejected: ls.rejected.clone(),
             }))
         })
         .collect::<Result<Vec<_>>>()?;
@@ -348,6 +425,7 @@ async fn negative_samples(
                                 path: f.path.clone(),
                                 hunk: h,
                                 labels: Vec::new(),
+                                rejected: Vec::new(),
                             })
                             .collect::<Vec<_>>()
                     })
@@ -514,6 +592,7 @@ impl Job<'_> {
             path: self.pending.path,
             hunk: self.pending.hunk,
             labels: self.pending.labels,
+            rejected: self.pending.rejected,
             answers,
         }
     }
@@ -588,11 +667,12 @@ fn write_report(path: &Path, reports: &[RuleReport], samples: usize) -> Result<(
     reports.iter().for_each(|r| {
         md.push(String::new());
         md.push(format!(
-            "## {}\n\n{} positives ({} outside the rule's paths), {} negatives; threshold now {:.2}, suggested {}.\n",
+            "## {}\n\n{} positives ({} outside the rule's paths), {} negatives, {} live comments judged wrong; threshold now {:.2}, suggested {}.\n",
             r.rule,
             r.positives,
             r.outside_paths,
             r.negatives,
+            r.rejected,
             r.current,
             r.suggested.map_or("none (no threshold reaches 50% precision)".to_owned(), |t| format!("{t:.2}"))
         ));

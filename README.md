@@ -17,7 +17,8 @@ arXiv:2605.30208): typed signals, thresholds calibrated on history, fail closed.
 | Distill threads into rules | `scripts/distill_v1.py` (one-off) | done: `rules/*.toml` |
 | Review one pull request | `dify-review review --pr N [--post]` | done (dry run by default) |
 | Backtest and calibrate thresholds | `dify-review backtest [--apply]` | done: `backtest/report.md` |
-| Watch assigned and mentioned pull requests | `dify-review watch --assignee LOGIN [--post]` | done; scheduling next |
+| Watch assigned and mentioned pull requests | `dify-review watch --assignee LOGIN [--post]` | done; local timer |
+| Judge live comments, recalibrate | `dify-review feedback`, then `backtest` | done; weekly local timer |
 
 ## Collect
 

@@ -2,6 +2,7 @@
 
 pub mod backtest;
 pub mod diff;
+pub mod feedback;
 pub mod model;
 pub mod review;
 pub mod rules;

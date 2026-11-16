@@ -8,6 +8,11 @@
 //! instance, so a negative that does contain the rule's hint pattern is
 //! counted as *tolerated*, not noise; noise is a comment on a negative the
 //! hint does not match (or any negative, for a rule without a hint).
+//!
+//! Feedback on live comments adds both kinds: a comment that turned out
+//! right is a positive; one that turned out wrong (👎, a reply rejecting
+//! it) is an explicit negative for its rule, counted as noise whether or
+//! not the hint matches.
 
 use std::collections::BTreeMap;
 
@@ -45,6 +50,8 @@ pub struct Sample {
     pub hunk: Hunk,
     /// Empty for a negative.
     pub labels: Vec<Label>,
+    /// Rules that commented here and were told they were wrong.
+    pub rejected: Vec<RuleId>,
     /// Jev's answers keyed by rule id; a rule not asked is absent.
     pub answers: BTreeMap<String, Answer>,
 }
@@ -91,6 +98,8 @@ pub struct RuleReport {
     /// Positives whose path the rule's `paths` do not cover: never asked.
     pub outside_paths: usize,
     pub negatives: usize,
+    /// Explicit negatives: live comments of this rule judged wrong.
+    pub rejected: usize,
     pub rows: Vec<Row>,
     /// The threshold with the best F0.5 among those with precision of at
     /// least MIN_PRECISION, higher on ties; None when there is none: the
@@ -110,7 +119,11 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
         .collect();
     let negatives: Vec<&Sample> = samples
         .iter()
-        .filter(|s| s.labels.is_empty() && rule.applies_to(&s.path))
+        .filter(|s| s.labels.is_empty() && s.rejected.is_empty() && rule.applies_to(&s.path))
+        .collect();
+    let rejected: Vec<&Sample> = samples
+        .iter()
+        .filter(|s| s.rejected.contains(&rule.id))
         .collect();
     let hinted = |s: &Sample| {
         rule.hint
@@ -136,7 +149,8 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
                 noise: negatives
                     .iter()
                     .filter(|s| !hinted(s) && verdict(s, t).is_some())
-                    .count(),
+                    .count()
+                    + rejected.iter().filter(|s| verdict(s, t).is_some()).count(),
                 tolerated: negatives
                     .iter()
                     .filter(|s| hinted(s) && verdict(s, t).is_some())
@@ -179,11 +193,20 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
             .iter()
             .filter(|s| hinted(s) == want_hint && verdict(s, at).is_some())
             .map(|s| s.origin.clone())
-            .collect()
+            .collect::<Vec<_>>()
     };
+    let noise = fired_at(false)
+        .into_iter()
+        .chain(
+            rejected
+                .iter()
+                .filter(|s| verdict(s, at).is_some())
+                .map(|s| format!("{} (judged wrong live)", s.origin)),
+        )
+        .collect();
     RuleReport {
         missed,
-        noise: fired_at(false),
+        noise,
         tolerated: fired_at(true),
         rule: rule.id.clone(),
         current: rule.threshold,
@@ -193,6 +216,7 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
             .filter(|(s, _)| !rule.applies_to(&s.path))
             .count(),
         negatives: negatives.len(),
+        rejected: rejected.len(),
         rows,
         suggested,
     }
@@ -216,6 +240,7 @@ mod tests {
             hunk: parse_patch(&format!("@@ -1 +1 @@\n{line}"))
                 .unwrap()
                 .remove(0),
+            rejected: Vec::new(),
             labels: label
                 .then(|| Label {
                     rule: RuleId("r".into()),
@@ -259,6 +284,19 @@ mod tests {
         let row = r.rows.iter().find(|row| row.threshold == 0.7).unwrap();
         assert_eq!((row.hits, row.noise, row.tolerated), (1, 1, 1));
         assert_eq!(r.tolerated, vec!["api/b.py".to_owned()]);
+    }
+
+    #[test]
+    fn rejected_counts_as_noise_even_with_the_pattern() {
+        let rule = parse_rule("r", NOUL).unwrap();
+        let mut wrong = sample_with("api/b.py", false, 0.9, "+x = f()  # type: ignore");
+        wrong.rejected = vec![RuleId("r".into())];
+        let r = evaluate(&rule, &[sample("api/a.py", true, 0.9), wrong]);
+        let row = r.rows.iter().find(|row| row.threshold == 0.7).unwrap();
+        assert_eq!(
+            (row.hits, row.noise, row.tolerated, r.rejected),
+            (1, 1, 0, 1)
+        );
     }
 
     #[test]

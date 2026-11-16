@@ -1,0 +1,56 @@
+# What became of each comment dify-review posted. Written by
+# `dify-review feedback`; `backtest` reads `right` as a positive and
+# `wrong` as an explicit negative. Do not edit: rerun it.
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578947"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578961"
+rule = "precise-types"
+option = "paramspec"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578973"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863272"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863295"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863313"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4583862409"
+rule = "precise-types"
+option = "paramspec"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4583862424"
+rule = "precise-types"
+option = "paramspec"
+outcome = "pending"
+reason = "pull request still open"

@@ -146,6 +146,11 @@ pub struct Comment {
     pub body: String,
     pub created_at: Timestamp,
     pub url: String,
+    /// Reactions on the comment; absent in data collected before they were.
+    #[serde(default)]
+    pub thumbs_up: u32,
+    #[serde(default)]
+    pub thumbs_down: u32,
 }
 
 impl Comment {
@@ -249,6 +254,8 @@ mod tests {
             body: body.into(),
             created_at: Timestamp::UNIX_EPOCH,
             url: String::new(),
+            thumbs_up: 0,
+            thumbs_down: 0,
         }
     }
 

@@ -21,6 +21,7 @@ const FRAGMENTS: &str = r#"
 fragment C on PullRequestReviewComment {
   databaseId body createdAt diffHunk url
   author { __typename login }
+  reactionGroups { content reactors { totalCount } }
 }
 fragment T on PullRequestReviewThread {
   id isResolved isOutdated path line originalLine diffSide
@@ -111,6 +112,20 @@ struct GqlComment {
     diff_hunk: String,
     url: String,
     author: Option<Actor>,
+    #[serde(default)]
+    reaction_groups: Vec<GqlReactionGroup>,
+}
+
+#[derive(Deserialize)]
+struct GqlReactionGroup {
+    content: String,
+    reactors: GqlCount,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GqlCount {
+    total_count: u32,
 }
 
 #[derive(Deserialize)]
@@ -366,10 +381,19 @@ fn to_thread(repo: &Repo, pr: &PullRequestMeta, t: GqlThread) -> ReviewThread {
                     (Some(a.login), kind)
                 }
             };
+            let count = |what: &str| {
+                c.reaction_groups
+                    .iter()
+                    .filter(|g| g.content == what)
+                    .map(|g| g.reactors.total_count)
+                    .sum()
+            };
             Comment {
                 id: c.database_id,
                 author,
                 author_kind,
+                thumbs_up: count("THUMBS_UP"),
+                thumbs_down: count("THUMBS_DOWN"),
                 body: c.body,
                 created_at: c.created_at,
                 url: c.url,

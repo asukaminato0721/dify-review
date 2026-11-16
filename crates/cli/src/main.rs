@@ -9,6 +9,7 @@ use dify_review_core::{Login, PrState, Repo, ReviewThread, ThreadId, since::pars
 use dify_review_github::{GitHub, collect};
 
 mod backtest;
+mod feedback;
 mod review;
 mod watch;
 
@@ -32,6 +33,8 @@ enum Cmd {
     Backtest(backtest::BacktestArgs),
     /// Review the pull requests where a member mentioned @dify-codereview (one pass).
     Watch(watch::WatchArgs),
+    /// Judge what became of the comments dify-review posted (for backtest).
+    Feedback(feedback::FeedbackArgs),
 }
 
 #[derive(clap::Args)]
@@ -71,6 +74,7 @@ async fn main() -> Result<()> {
         Cmd::Review(args) => review::run(args).await,
         Cmd::Backtest(args) => backtest::run(args).await,
         Cmd::Watch(args) => watch::run(args).await,
+        Cmd::Feedback(args) => feedback::run(args).await,
     }
 }
 

@@ -135,7 +135,7 @@ impl Finding {
             .map(|u| format!(" Learned from [an earlier review]({u})."))
             .unwrap_or_default();
         format!(
-            "{}\n\n<sub>dify-codereview · `{}`{}{} Reply here if this is wrong.</sub>\n{}:rule={};key={} -->",
+            "{}\n\n<sub>dify-codereview · `{}`{}{} Reply here if this is wrong.</sub>\n{}:rule={}{};key={} -->",
             self.verdict.comment,
             self.rule,
             self.verdict
@@ -146,6 +146,11 @@ impl Finding {
             source,
             MARKER,
             self.rule,
+            self.verdict
+                .option
+                .as_ref()
+                .map(|o| format!(";option={o}"))
+                .unwrap_or_default(),
             self.key(),
         )
     }

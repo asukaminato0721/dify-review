@@ -4,7 +4,7 @@
 
 ## avoid-cast
 
-11 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.95, suggested 0.95.
+11 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.95, suggested 0.95.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -25,13 +25,13 @@
 
 Tolerated: pattern present, reviewer let it through (3):
 
-- https://github.com/langgenius/dify/pull/37950/files api/tests/unit_tests/controllers/openapi/test_contract.py `@@ -100,7 +101,7 @@ def view(*, body):`
 - https://github.com/langgenius/dify/pull/36791/files api/tests/test_containers_integration_tests/controllers/console/workspace/test_members.py `@@ -12,24 +17,41 @@`
+- https://github.com/langgenius/dify/pull/37950/files api/tests/unit_tests/controllers/openapi/test_contract.py `@@ -100,7 +101,7 @@ def view(*, body):`
 - https://github.com/langgenius/dify/pull/39822/files api/extensions/ext_application_services.py `@@ -0,0 +1,44 @@`
 
 ## inject-session
 
-7 positives (0 outside the rule's paths), 126 negatives; threshold now 0.80, suggested 0.80.
+7 positives (0 outside the rule's paths), 126 negatives, 0 live comments judged wrong; threshold now 0.80, suggested 0.80.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -56,7 +56,7 @@ Missed comments (1):
 
 ## no-bypass-init
 
-2 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.80, suggested 0.80.
+2 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.80, suggested 0.80.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -81,7 +81,7 @@ Missed comments (1):
 
 ## no-reflection
 
-10 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.90, suggested 0.90.
+10 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.90, suggested 0.90.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -113,7 +113,7 @@ Tolerated: pattern present, reviewer let it through (3):
 
 ## no-test-for-type-errors
 
-14 positives (1 outside the rule's paths), 1307 negatives; threshold now 0.85, suggested 0.85.
+14 positives (1 outside the rule's paths), 1307 negatives, 0 live comments judged wrong; threshold now 0.85, suggested 0.85.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -150,7 +150,7 @@ Noise: would comment where the pattern is absent (2):
 
 ## no-type-ignore
 
-16 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.80, suggested 0.80.
+16 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.80, suggested 0.80.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -174,11 +174,11 @@ Tolerated: pattern present, reviewer let it through (21):
 - https://github.com/langgenius/dify/pull/38280/files api/libs/pagination.py `@@ -0,0 +1,86 @@`
 - https://github.com/langgenius/dify/pull/44458/files api/providers/vdb/vdb-alibabacloud-mysql/tests/unit_tests/test_alibabacloud_mysql_vector.py `@@ -645,7 +645,7 @@ def test_unsupported_distance_function(self, mock_pool_class):`
 - https://github.com/langgenius/dify/pull/44458/files api/providers/vdb/vdb-clickzetta/tests/unit_tests/test_clickzetta_vector.py `@@ -809,7 +811,7 @@ def test_clickzetta_pool_cleanup_and_shutdown_edge_paths(clickzetta_module):`
-- https://github.com/langgenius/dify/pull/43112/files api/tests/unit_tests/controllers/console/app/test_workflow_draft_variable_handlers.py `@@ -0,0 +1,219 @@`
 - https://github.com/langgenius/dify/pull/44815/files api/tests/unit_tests/libs/test_custom_inputs.py `@@ -8,61 +8,61 @@`
-- https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -225,7 +234,7 @@ def test_dataset_detail_serializes_after_session_closes(sqlite_session: Session)`
+- https://github.com/langgenius/dify/pull/43112/files api/tests/unit_tests/controllers/console/app/test_workflow_draft_variable_handlers.py `@@ -0,0 +1,219 @@`
 - https://github.com/langgenius/dify/pull/44875/files api/tests/unit_tests/events/test___init__.py `@@ -3,40 +3,42 @@`
 - https://github.com/langgenius/dify/pull/44875/files api/tests/unit_tests/events/test_app_event.py `@@ -190,11 +197,11 @@ def test_requires_caller_session(self, app_model: App) -> None:`
+- https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -225,7 +234,7 @@ def test_dataset_detail_serializes_after_session_closes(sqlite_session: Session)`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_archive_storage.py `@@ -144,20 +149,23 @@ def test_init_address_style_override(monkeypatch: pytest.MonkeyPatch, address_st`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_external_api.py `@@ -78,23 +95,23 @@ def get(self):`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_external_api.py `@@ -277,12 +294,15 @@ def finalize(self, _e: Exception, data: dict[str, object], _status_code: int) ->`
@@ -195,7 +195,7 @@ Tolerated: pattern present, reviewer let it through (21):
 
 ## parse-dont-validate
 
-4 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.40, suggested 0.40.
+4 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.40, suggested 0.40.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -225,21 +225,21 @@ Tolerated: pattern present, reviewer let it through (42):
 - https://github.com/langgenius/dify/pull/42034/files api/fields/workflow_run_fields.py `@@ -185,27 +184,45 @@ def _normalize_timestamp(cls, value: datetime | int | None) -> int | None:`
 - https://github.com/langgenius/dify/pull/42335/files api/models/model.py `@@ -1198,12 +1198,7 @@ class Conversation(Base):`
 - https://github.com/langgenius/dify/pull/42335/files api/models/model.py `@@ -1519,12 +1513,7 @@ class Message(Base):`
-- https://github.com/langgenius/dify/pull/43112/files api/fields/workflow_draft_variable_fields.py `@@ -25,7 +26,27 @@ def _convert_values_to_json_serializable_object(value: Segment) -> RecursiveJSON`
 - https://github.com/langgenius/dify/pull/44775/files api/providers/vdb/vdb-baidu/tests/unit_tests/src/dify_vdb_baidu/test_baidu_vector.py `@@ -123,15 +127,154 @@ class FieldType:`
 - https://github.com/langgenius/dify/pull/44775/files api/providers/vdb/vdb-baidu/tests/unit_tests/src/dify_vdb_baidu/test_baidu_vector.py `@@ -272,20 +419,25 @@ def test_factory_initializes_collection_name_and_index_struct(baidu_module, monk`
 - https://github.com/langgenius/dify/pull/44775/files api/providers/vdb/vdb-baidu/tests/unit_tests/src/dify_vdb_baidu/test_baidu_vector.py `@@ -545,9 +665,14 @@ def test_factory_uses_existing_collection_prefix_when_index_struct_exists(`
-- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -17,14 +18,19 @@ def _tool_provider(name: str = "provider") -> SimpleNamespace:`
-- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -35,7 +41,13 @@ def fake_request(method, path, type_, **kwargs):`
-- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -46,20 +58,31 @@ def fake_request(method, path, type_, **kwargs):`
-- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/services/rag_pipeline/pipeline_template/built_in/test_built_in_retrieval.py `@@ -99,7 +99,7 @@ def test_get_builtin_data_reads_from_file_and_caches(mocker: MockerFixture) -> N`
-- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/services/rag_pipeline/pipeline_template/built_in/test_built_in_retrieval.py `@@ -115,7 +115,7 @@ def test_get_builtin_data_reads_from_file_and_caches(mocker: MockerFixture) -> N`
-- https://github.com/langgenius/dify/pull/44816/files api/tests/unit_tests/core/app/apps/chat/test_generate_response_converter.py `@@ -57,9 +59,12 @@ def stream() -> Generator[ChatbotAppStreamResponse]:`
+- https://github.com/langgenius/dify/pull/43112/files api/fields/workflow_draft_variable_fields.py `@@ -25,7 +26,27 @@ def _convert_values_to_json_serializable_object(value: Segment) -> RecursiveJSON`
 - https://github.com/langgenius/dify/pull/44820/files api/tests/unit_tests/core/app/apps/pipeline/test_generate_response_converter.py `@@ -35,11 +35,14 @@ def test_convert_blocking_full_and_simple_response():`
 - https://github.com/langgenius/dify/pull/44820/files api/tests/unit_tests/core/app/apps/pipeline/test_generate_response_converter.py `@@ -53,11 +56,12 @@ def stream() -> Generator[AppStreamResponse]:`
 - https://github.com/langgenius/dify/pull/44820/files api/tests/unit_tests/core/app/apps/pipeline/test_generate_response_converter.py `@@ -105,7 +109,13 @@ def stream() -> Generator[AppStreamResponse]:`
 - https://github.com/langgenius/dify/pull/44817/files api/tests/unit_tests/core/plugin/impl/test_agent.py `@@ -17,13 +20,14 @@ def _agent_provider(name: str = "agent") -> SimpleNamespace:`
 - https://github.com/langgenius/dify/pull/44817/files api/tests/unit_tests/core/plugin/impl/test_agent.py `@@ -45,16 +57,19 @@ def fake_request(method, path, type_, **kwargs):`
+- https://github.com/langgenius/dify/pull/44816/files api/tests/unit_tests/core/app/apps/chat/test_generate_response_converter.py `@@ -57,9 +59,12 @@ def stream() -> Generator[ChatbotAppStreamResponse]:`
+- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -17,14 +18,19 @@ def _tool_provider(name: str = "provider") -> SimpleNamespace:`
+- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -35,7 +41,13 @@ def fake_request(method, path, type_, **kwargs):`
+- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/core/plugin/impl/test_tool.py `@@ -46,20 +58,31 @@ def fake_request(method, path, type_, **kwargs):`
+- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/services/rag_pipeline/pipeline_template/built_in/test_built_in_retrieval.py `@@ -99,7 +99,7 @@ def test_get_builtin_data_reads_from_file_and_caches(mocker: MockerFixture) -> N`
+- https://github.com/langgenius/dify/pull/44822/files api/tests/unit_tests/services/rag_pipeline/pipeline_template/built_in/test_built_in_retrieval.py `@@ -115,7 +115,7 @@ def test_get_builtin_data_reads_from_file_and_caches(mocker: MockerFixture) -> N`
 - https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -162,11 +164,15 @@ def test_dataset_detail_expands_legacy_null_retrieval_nested_fields():`
 - https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -193,7 +199,10 @@ def test_dataset_detail_expands_missing_weighted_score_nested_fields():`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_external_api.py `@@ -424,21 +488,26 @@ def _resolve_by_class(exception: type[Exception]) -> tuple[int, str]:`
@@ -264,7 +264,7 @@ Tolerated: pattern present, reviewer let it through (42):
 
 ## precise-types
 
-11 positives (0 outside the rule's paths), 1617 negatives; threshold now 0.35, suggested 0.35.
+11 positives (0 outside the rule's paths), 1617 negatives, 0 live comments judged wrong; threshold now 0.35, suggested 0.35.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -289,36 +289,36 @@ Missed comments (1):
 
 Tolerated: pattern present, reviewer let it through (26):
 
-- https://github.com/langgenius/dify/pull/37660/files api/core/app/app_config/common/sensitive_word_avoidance/manager.py `@@ -1,10 +1,73 @@`
 - https://github.com/langgenius/dify/pull/36791/files api/tests/test_containers_integration_tests/conftest.py `@@ -568,7 +571,7 @@ def mock_ssrf_proxy_requests():`
+- https://github.com/langgenius/dify/pull/37660/files api/core/app/app_config/common/sensitive_word_avoidance/manager.py `@@ -1,10 +1,73 @@`
 - https://github.com/langgenius/dify/pull/39822/files api/controllers/console/flask_admission.py `@@ -0,0 +1,69 @@`
 - https://github.com/langgenius/dify/pull/40379/files api/tests/unit_tests/controllers/console/workspace/test_snippets.py `@@ -39,30 +42,31 @@ def _account(account_id: str = "account-1") -> Account:`
 - https://github.com/langgenius/dify/pull/42034/files api/fields/workflow_run_fields.py `@@ -185,27 +184,45 @@ def _normalize_timestamp(cls, value: datetime | int | None) -> int | None:`
-- https://github.com/langgenius/dify/pull/43112/files api/fields/workflow_draft_variable_fields.py `@@ -25,7 +26,27 @@ def _convert_values_to_json_serializable_object(value: Segment) -> RecursiveJSON`
 - https://github.com/langgenius/dify/pull/44775/files api/providers/vdb/vdb-baidu/tests/unit_tests/src/dify_vdb_baidu/test_baidu_vector.py `@@ -123,15 +127,154 @@ class FieldType:`
 - https://github.com/langgenius/dify/pull/44775/files api/providers/vdb/vdb-baidu/tests/unit_tests/src/dify_vdb_baidu/test_baidu_vector.py `@@ -272,20 +419,25 @@ def test_factory_initializes_collection_name_and_index_struct(baidu_module, monk`
+- https://github.com/langgenius/dify/pull/43112/files api/fields/workflow_draft_variable_fields.py `@@ -25,7 +26,27 @@ def _convert_values_to_json_serializable_object(value: Segment) -> RecursiveJSON`
 - https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -19,13 +19,15 @@`
 - https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_dataset_fields.py `@@ -397,7 +406,9 @@ def _count_selects(session: Session) -> Generator[list[str]]:`
 - https://github.com/langgenius/dify/pull/44881/files api/tests/unit_tests/fields/test_message_fields.py `@@ -21,67 +21,79 @@ def _retrieved_video_resource():`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_archive_storage.py `@@ -19,8 +22,8 @@`
 - https://github.com/langgenius/dify/pull/44885/files api/tests/unit_tests/libs/test_archive_storage.py `@@ -144,20 +149,23 @@ def test_init_address_style_override(monkeypatch: pytest.MonkeyPatch, address_st`
-- https://github.com/langgenius/dify/pull/44898/files api/providers/vdb/vdb-analyticdb/tests/unit_tests/src/dify_vdb_analyticdb/test_analyticdb_vector_openapi.py `@@ -1,91 +1,121 @@`
 - https://github.com/langgenius/dify/pull/45142/files api/tests/unit_tests/controllers/console/app/test_workflow.py `@@ -228,6 +228,41 @@ def test_publish_workflow_returns_success(`
+- https://github.com/langgenius/dify/pull/44898/files api/providers/vdb/vdb-analyticdb/tests/unit_tests/src/dify_vdb_analyticdb/test_analyticdb_vector_openapi.py `@@ -1,91 +1,121 @@`
 - https://github.com/langgenius/dify/pull/45458/files api/tests/unit_tests/controllers/console/app/test_workflow_run.py `@@ -152,8 +152,8 @@ def test_pause_details_response_schema_is_registered() -> None:`
 - https://github.com/langgenius/dify/pull/45336/files api/tests/unit_tests/core/workflow/nodes/agent_v2/test_session_store.py `@@ -158,7 +158,14 @@ def _install_backend_client(monkeypatch: pytest.MonkeyPatch) -> MagicMock:`
 - https://github.com/langgenius/dify/pull/45472/files api/tests/unit_tests/services/test_conversation_service.py `@@ -61,7 +61,7 @@ class ConversationServiceTestDataFactory:`
 - https://github.com/langgenius/dify/pull/45472/files api/tests/unit_tests/services/test_conversation_service.py `@@ -79,39 +79,44 @@ def create_account(account_id: str = ACCOUNT_ID, **kwargs) -> Account:`
 - https://github.com/langgenius/dify/pull/45698/files api/tests/unit_tests/services/knowledge/summaries/test_adapters.py `@@ -196,7 +196,7 @@ def test_generate_uses_document_language(self, sqlite_session: Session, monkeypa`
 - https://github.com/langgenius/dify/pull/45698/files api/tests/unit_tests/services/knowledge/summaries/test_adapters.py `@@ -304,7 +304,7 @@ def test_provided_session_releases_transaction_before_every_vector_attempt(`
+- https://github.com/langgenius/dify/pull/45726/files api/tests/unit_tests/core/tools/custom_tool/test_tool.py `@@ -393,9 +395,9 @@ def test_do_http_request_builds_arguments_and_handles_invalid_method(monkeypatch`
 - https://github.com/langgenius/dify/pull/45725/files api/tests/helpers/unit/services/document_service_validation.py `@@ -155,7 +157,7 @@ def create_dataset_mock(`
 - https://github.com/langgenius/dify/pull/45725/files api/tests/helpers/unit/services/document_service_validation.py `@@ -188,7 +190,7 @@ def create_knowledge_config(`
-- https://github.com/langgenius/dify/pull/45726/files api/tests/unit_tests/core/tools/custom_tool/test_tool.py `@@ -393,9 +395,9 @@ def test_do_http_request_builds_arguments_and_handles_invalid_method(monkeypatch`
 - https://github.com/langgenius/dify/pull/46188/files api/tests/unit_tests/controllers/web/test_wraps.py `@@ -575,15 +584,17 @@ def post(self, _app: _wraps_App, _end_user: _wraps_EndUser) -> Never:`
 - https://github.com/langgenius/dify/pull/46191/files api/tests/unit_tests/controllers/service_api/app/test_workflow_events.py `@@ -77,11 +80,13 @@ def enter(self, request_id: str | None = None) -> str:`
 
 ## tests-behavior-not-calls
 
-0 positives (0 outside the rule's paths), 1405 negatives; threshold now 0.70, suggested none (no threshold reaches 50% precision).
+0 positives (0 outside the rule's paths), 1405 negatives, 0 live comments judged wrong; threshold now 0.70, suggested none (no threshold reaches 50% precision).
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -356,7 +356,7 @@ Tolerated: pattern present, reviewer let it through (14):
 
 ## tests-real-dependencies
 
-36 positives (0 outside the rule's paths), 1405 negatives; threshold now 0.30, suggested 0.30.
+36 positives (0 outside the rule's paths), 1405 negatives, 0 live comments judged wrong; threshold now 0.30, suggested 0.30.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
@@ -439,7 +439,7 @@ Tolerated: pattern present, reviewer let it through (105):
 
 ## unrelated-change
 
-6 positives (0 outside the rule's paths), 1645 negatives; threshold now 0.90, suggested 0.90.
+6 positives (0 outside the rule's paths), 1645 negatives, 0 live comments judged wrong; threshold now 0.90, suggested 0.90.
 
 | threshold | hits | fix | noise | precision | tolerated |
 |---|---|---|---|---|---|
