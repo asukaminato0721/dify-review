@@ -728,11 +728,13 @@ struct RawApp {
 /// GitHub Actions jobs that failed on `sha`: the repository's own CI. Checks
 /// from other apps (autofix.ci) and commit statuses (codecov coverage gates)
 /// are left out, and so are runs still going or cancelled (often superseded
-/// by a newer run).
+/// by a newer run), and jobs whose name contains one of `ignore` (case
+/// insensitive), such as flaky E2E suites.
 pub async fn failing_checks(
     gh: &GitHub,
     repo: &Repo,
     sha: &CommitSha,
+    ignore: &[String],
 ) -> Result<Vec<FailingCheck>> {
     let runs: RawCheckRuns = gh
         .get(&format!(
@@ -744,6 +746,10 @@ pub async fn failing_checks(
         .check_runs
         .into_iter()
         .filter(|r| r.app.as_ref().is_some_and(|a| a.slug == "github-actions"))
+        .filter(|r| {
+            let name = r.name.to_lowercase();
+            !ignore.iter().any(|i| name.contains(&i.to_lowercase()))
+        })
         .filter(|r| {
             matches!(
                 r.conclusion.as_deref(),

@@ -112,7 +112,8 @@ schedule, with `--since` a little longer than the interval:
   (its commit date, a force-push, or its first CI run, whichever is latest;
   the label is re-set to refresh that time). A new head gets a Jev review;
   a judged head only gets cheap checks each pass (merge conflict, failing
-  GitHub Actions jobs, unresolved threads) to keep the label right. Drafts
+  GitHub Actions jobs, except flaky ones named in `--ignore-ci`, default
+  `E2E`; unresolved threads) to keep the label right. Drafts
   wait.
   A review is posted only when the author must act: new suggestions, a
   merge conflict (asking for a rebase) or failing CI (linked), each

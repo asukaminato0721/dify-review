@@ -53,6 +53,10 @@ pub struct ReviewOpts {
     /// Post the review. Without this flag nothing is written to GitHub.
     #[arg(long)]
     post: bool,
+    /// Failing CI jobs whose name contains this (case insensitive) are not
+    /// flagged: flaky suites. Repeatable.
+    #[arg(long = "ignore-ci", default_value = "E2E")]
+    ignore_ci: Vec<String>,
 }
 
 pub async fn run(a: ReviewArgs) -> Result<()> {
@@ -123,7 +127,9 @@ impl Reviewer {
             }
             (true, false) => self.recheck(&pr, &history).await,
             _ => {
-                let failing = pr::failing_checks(&self.gh, &self.repo, &pr.head).await?;
+                let failing =
+                    pr::failing_checks(&self.gh, &self.repo, &pr.head, &self.opts.ignore_ci)
+                        .await?;
                 self.judge_and_post(&pr, ask, &failing).await
             }
         }
@@ -134,7 +140,8 @@ impl Reviewer {
     /// finished and failed; each is flagged once per head.
     async fn recheck(&self, pr: &PullRequest, history: &pr::History) -> Result<()> {
         let head = &pr.head.0;
-        let failing = pr::failing_checks(&self.gh, &self.repo, &pr.head).await?;
+        let failing =
+            pr::failing_checks(&self.gh, &self.repo, &pr.head, &self.opts.ignore_ci).await?;
         let new_conflict = pr.conflicted() && !history.conflicts.contains(head);
         let new_ci = !failing.is_empty() && !history.ci.contains(head);
         match new_conflict || new_ci {
