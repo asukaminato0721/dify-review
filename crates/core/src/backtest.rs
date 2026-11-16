@@ -1,9 +1,10 @@
 //! Calibration: had a rule been running, where would it have commented,
 //! compared with where the reviewer did?
 //!
-//! Positives are hunks the reviewer commented on, labelled with the rule
+//! Positives are chunks (a file's hunks, judged together) the reviewer
+//! commented on, labelled with the rule
 //! (and, for a choice rule, the fix) the comment is an instance of.
-//! Negatives are hunks the reviewer let through: the final diff of the
+//! Negatives are chunks the reviewer let through: the final diff of the
 //! pull requests they reviewed. A reviewer does not comment on every
 //! instance, so a negative that does contain the rule's hint pattern is
 //! counted as *tolerated*, not noise; noise is a comment on a negative the
@@ -18,7 +19,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::diff::Hunk;
+use crate::diff::Chunk;
 use crate::review::{Answer, decide_at, passes_gate};
 use crate::rules::{OptionName, Rule, RuleId};
 
@@ -44,10 +45,10 @@ pub struct Label {
 #[derive(Debug, Clone)]
 pub struct Sample {
     /// Where it came from: the review comment URL (positive) or the pull
-    /// request, file and hunk header (negative).
+    /// request, file and first hunk header (negative).
     pub origin: String,
     pub path: String,
-    pub hunk: Hunk,
+    pub chunk: Chunk,
     /// Empty for a negative.
     pub labels: Vec<Label>,
     /// Rules that commented here and were told they were wrong.
@@ -128,12 +129,12 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
     let hinted = |s: &Sample| {
         rule.hint
             .as_ref()
-            .is_some_and(|h| s.hunk.added().any(|l| h.is_match(&l.text)))
+            .is_some_and(|h| s.chunk.added().any(|l| h.is_match(&l.text)))
     };
     let verdict = |s: &Sample, t: f64| {
         s.answers
             .get(&rule.id.0)
-            .and_then(|a| decide_at(rule, &s.hunk, a, t))
+            .and_then(|a| decide_at(rule, &s.chunk, a, t))
     };
     let rows: Vec<Row> = GRID
         .iter()
@@ -174,7 +175,7 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
         .map(|(s, l)| {
             let why = match s.answers.get(&rule.id.0) {
                 None => "not asked".to_owned(),
-                Some(_) if !passes_gate(rule, &s.hunk) => "hint not matched in scope".to_owned(),
+                Some(_) if !passes_gate(rule, &s.chunk) => "hint not matched in scope".to_owned(),
                 Some(Answer::Noul(p)) => format!("jev {p:.2}"),
                 Some(Answer::Choice { choice, confidence }) => {
                     format!("jev {choice} {confidence:.2}")
@@ -225,7 +226,6 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::diff::parse_patch;
     use crate::rules::parse_rule;
     use crate::rules::tests::NOUL;
 
@@ -237,9 +237,7 @@ mod tests {
         Sample {
             origin: path.into(),
             path: path.into(),
-            hunk: parse_patch(&format!("@@ -1 +1 @@\n{line}"))
-                .unwrap()
-                .remove(0),
+            chunk: crate::review::tests::chunk(&format!("@@ -1 +1 @@\n{line}")),
             rejected: Vec::new(),
             labels: label
                 .then(|| Label {

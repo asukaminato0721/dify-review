@@ -48,11 +48,14 @@ cargo run --release -- review --pr 46483           # dry run: print the comments
 cargo run --release -- review --pr 46483 --post    # post them as one COMMENT review
 ```
 
-Each changed hunk is one Jev request carrying every rule whose `paths` match
-the file; a rule comments when its `noul` probability is at least 0.7, or when
+Each changed file is one Jev request carrying every rule whose `paths` match
+it: the rules' questions are most of a request, so they go once per file, not
+once per hunk. The file's hunks with additions are packed together, split into
+more requests only past Jev's input limit (a single hunk past it is skipped). A
+rule comments when its `noul` probability is at least 0.7, or when
 its `choice` picks an option that has a comment with confidence at least 0.6.
 The comment goes on the first added line the rule's `hint` matches, else the
-hunk's first added line. Comments already on the pull request (by their hidden
+first added line of the request's hunks. Comments already on the pull request (by their hidden
 marker) are not posted again. Without a Jev key (`--hints-only`, or no
 `TYPESAFE_API_KEY`), `noul` rules fall back to their hint regex and `choice`
 rules stay silent. A review never approves or requests changes.
@@ -75,12 +78,13 @@ cargo run --release -- backtest            # report per rule, suggest thresholds
 cargo run --release -- backtest --apply    # write the suggestions into rules/*.toml
 ```
 
-Positives are the hunks behind the review comments listed in
-`backtest/labels.toml`, in full, as they were when commented on: GitHub's
-`diff_hunk` stops at the commented line, so the hunk is taken from the pull
-request's `base...commit` diff at the comment's commit (cached in
-`data/backtest-hunks.jsonl`), falling back to the truncated one. Negatives are the
-added hunks in the final diff of those merged pull requests. A reviewer does
+Samples have the shape review sends: a file's hunks, packed the same way.
+Positives are the files behind the review comments listed in
+`backtest/labels.toml`, as they were when commented on: the file's diff in the
+pull request's `base...commit` at the comment's commit (cached in
+`data/backtest-files.jsonl`), falling back to GitHub's `diff_hunk`, which stops
+at the commented line. Negatives are the changed files in the final diff of
+those merged pull requests. A reviewer does
 not comment every instance, so a negative that contains the rule's `hint`
 pattern counts as *tolerated* (a comment the bot should make), not noise.
 The suggested threshold maximises F0.5 among those with at least 50%

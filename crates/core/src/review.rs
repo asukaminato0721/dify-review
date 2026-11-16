@@ -1,9 +1,9 @@
-//! From a rule and a hunk to an inline comment: decide from Jev's answer
+//! From a rule and a chunk of a file to an inline comment: decide from Jev's answer
 //! (or the hint alone), anchor on a line, render with a dedupe marker.
 
 use serde::{Deserialize, Serialize};
 
-use crate::diff::{Hunk, LineKind, NewLine};
+use crate::diff::{Chunk, LineKind, NewLine};
 use crate::rules::{HintScope, Judge, OptionName, Rule, RuleId, Severity};
 use crate::{MARKER, Repo};
 
@@ -14,7 +14,7 @@ pub enum Answer {
     Choice { choice: OptionName, confidence: f64 },
 }
 
-/// What a rule says about a hunk, before it is placed on a line.
+/// What a rule says about a chunk, before it is placed on a line.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Verdict {
     pub option: Option<OptionName>,
@@ -23,22 +23,22 @@ pub struct Verdict {
     pub comment: String,
 }
 
-/// Decide about a hunk from Jev's answer at the rule's own threshold.
-pub fn decide(rule: &Rule, hunk: &Hunk, answer: &Answer) -> Option<Verdict> {
-    decide_at(rule, hunk, answer, rule.threshold)
+/// Decide about a chunk from Jev's answer at the rule's own threshold.
+pub fn decide(rule: &Rule, chunk: &Chunk, answer: &Answer) -> Option<Verdict> {
+    decide_at(rule, chunk, answer, rule.threshold)
 }
 
 /// A gated rule only speaks where its hint matches an added line.
-pub fn passes_gate(rule: &Rule, hunk: &Hunk) -> bool {
-    !rule.gate || hint_match(rule, hunk).is_some()
+pub fn passes_gate(rule: &Rule, chunk: &Chunk) -> bool {
+    !rule.gate || hint_match(rule, chunk).is_some()
 }
 
 /// Decide at a given threshold: the probability of yes (noul) or the
 /// confidence in a commenting option (choice). An answer of the wrong shape
 /// for the rule is ignored (no comment) rather than guessed at.
-pub fn decide_at(rule: &Rule, hunk: &Hunk, answer: &Answer, threshold: f64) -> Option<Verdict> {
+pub fn decide_at(rule: &Rule, chunk: &Chunk, answer: &Answer, threshold: f64) -> Option<Verdict> {
     match (&rule.judge, answer) {
-        _ if !passes_gate(rule, hunk) => None,
+        _ if !passes_gate(rule, chunk) => None,
         (Judge::Noul { comment, .. }, Answer::Noul(p)) => (*p >= threshold).then(|| Verdict {
             option: None,
             score: *p,
@@ -60,9 +60,9 @@ pub fn decide_at(rule: &Rule, hunk: &Hunk, answer: &Answer, threshold: f64) -> O
 
 /// Without Jev: a noul rule comments when its hint matches an added line.
 /// Choice rules need Jev to pick the fix, so they stay silent.
-pub fn decide_by_hint(rule: &Rule, hunk: &Hunk) -> Option<Verdict> {
+pub fn decide_by_hint(rule: &Rule, chunk: &Chunk) -> Option<Verdict> {
     match &rule.judge {
-        Judge::Noul { comment, .. } => hint_match(rule, hunk).map(|_| Verdict {
+        Judge::Noul { comment, .. } => hint_match(rule, chunk).map(|_| Verdict {
             option: None,
             score: 1.0,
             comment: comment.clone(),
@@ -73,24 +73,25 @@ pub fn decide_by_hint(rule: &Rule, hunk: &Hunk) -> Option<Verdict> {
 
 /// The first line in the rule's hint scope the hint matches. Removed lines
 /// never count: a comment can only sit on the new side.
-fn hint_match<'h>(rule: &Rule, hunk: &'h Hunk) -> Option<(NewLine, &'h str)> {
+fn hint_match<'h>(rule: &Rule, chunk: &'h Chunk) -> Option<(NewLine, &'h str)> {
     let hint = rule.hint.as_ref()?;
     let in_scope = |kind: LineKind| match rule.hint_scope {
         HintScope::Added => kind == LineKind::Added,
         HintScope::Hunk => kind != LineKind::Removed,
     };
-    hunk.lines
-        .iter()
+    chunk
+        .lines()
         .filter(|l| in_scope(l.kind))
         .find(|l| hint.is_match(&l.text))
         .and_then(|l| l.new_line.map(|n| (n, l.text.as_str())))
 }
 
 /// Where the comment goes: the first added line the hint matches, else the
-/// first added line of the hunk.
-pub fn anchor<'h>(rule: &Rule, hunk: &'h Hunk) -> Option<(NewLine, &'h str)> {
-    hint_match(rule, hunk).or_else(|| {
-        hunk.added()
+/// first added line of the chunk.
+pub fn anchor<'h>(rule: &Rule, chunk: &'h Chunk) -> Option<(NewLine, &'h str)> {
+    hint_match(rule, chunk).or_else(|| {
+        chunk
+            .added()
             .next()
             .and_then(|l| l.new_line.map(|n| (n, l.text.as_str())))
     })
@@ -108,8 +109,8 @@ pub struct Finding {
 }
 
 impl Finding {
-    pub fn new(rule: &Rule, path: &str, hunk: &Hunk, verdict: Verdict) -> Option<Self> {
-        let (line, text) = anchor(rule, hunk)?;
+    pub fn new(rule: &Rule, path: &str, chunk: &Chunk, verdict: Verdict) -> Option<Self> {
+        let (line, text) = anchor(rule, chunk)?;
         Some(Self {
             rule: rule.id.clone(),
             severity: rule.severity,
@@ -368,20 +369,24 @@ pub fn fnv1a(bytes: &[u8]) -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
-    use crate::diff::parse_patch;
+    use crate::diff::{Chunk, parse_patch};
+
+    pub(crate) fn chunk(patch: &str) -> Chunk {
+        Chunk::pack(parse_patch(patch).unwrap(), usize::MAX)
+            .chunks
+            .remove(0)
+    }
     use crate::rules::parse_rule;
     use crate::rules::tests::{CHOICE, NOUL};
 
-    fn setup() -> (Vec<Rule>, Hunk) {
+    fn setup() -> (Vec<Rule>, Chunk) {
         let rules = vec![
             parse_rule("no-type-ignore", NOUL).unwrap(),
             parse_rule("doubles", CHOICE).unwrap(),
         ];
-        let hunk = parse_patch("@@ -1,2 +1,3 @@\n a = 1\n+b = 2\n+c = f()  # type: ignore\n d")
-            .unwrap()
-            .remove(0);
+        let hunk = chunk("@@ -1,2 +1,3 @@\n a = 1\n+b = 2\n+c = f()  # type: ignore\n d");
         (rules, hunk)
     }
 
@@ -429,9 +434,7 @@ mod tests {
             );
             crate::rules::parse_rule("r", &text).unwrap()
         };
-        let hunk = parse_patch("@@ -1,2 +1,3 @@\n m = MagicMock()\n+x: int = 1\n y")
-            .unwrap()
-            .remove(0);
+        let hunk = chunk("@@ -1,2 +1,3 @@\n m = MagicMock()\n+x: int = 1\n y");
         assert!(!passes_gate(&gated("added"), &hunk));
         assert!(passes_gate(&gated("hunk"), &hunk));
         assert_eq!(anchor(&gated("hunk"), &hunk).unwrap().0, NewLine(1));

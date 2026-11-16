@@ -64,6 +64,76 @@ impl Hunk {
     }
 }
 
+/// Hunks of one file judged together, in one Jev request: the rules'
+/// questions, most of a request, are then sent once per file rather than
+/// once per hunk. Built only by `Chunk::pack`: every hunk has an added line
+/// (somewhere to comment), and the chunk fits the size it was packed for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Chunk {
+    hunks: Vec<Hunk>,
+    /// Length of `render()`.
+    chars: usize,
+}
+
+/// A file's hunks packed into chunks; a hunk over the limit on its own is
+/// set apart, to be skipped rather than truncated into a wrong answer.
+#[derive(Debug, Default)]
+pub struct Packed {
+    pub chunks: Vec<Chunk>,
+    pub oversized: Vec<Hunk>,
+}
+
+impl Chunk {
+    /// Consecutive hunks with additions, as few chunks as fit `max_chars`.
+    pub fn pack(hunks: impl IntoIterator<Item = Hunk>, max_chars: usize) -> Packed {
+        hunks
+            .into_iter()
+            .filter(Hunk::has_additions)
+            .fold(Packed::default(), |mut p, h| {
+                let size = h.render().len();
+                match (size > max_chars, p.chunks.last_mut()) {
+                    (true, _) => p.oversized.push(h),
+                    // +1: the newline joining it to the chunk.
+                    (false, Some(c)) if c.chars + 1 + size <= max_chars => {
+                        c.chars += 1 + size;
+                        c.hunks.push(h);
+                    }
+                    (false, _) => p.chunks.push(Chunk {
+                        hunks: vec![h],
+                        chars: size,
+                    }),
+                }
+                p
+            })
+    }
+
+    pub fn hunks(&self) -> &[Hunk] {
+        &self.hunks
+    }
+
+    /// Never empty: `pack` starts a chunk with a hunk.
+    pub fn first(&self) -> &Hunk {
+        &self.hunks[0]
+    }
+
+    pub fn lines(&self) -> impl Iterator<Item = &DiffLine> {
+        self.hunks.iter().flat_map(|h| h.lines.iter())
+    }
+
+    pub fn added(&self) -> impl Iterator<Item = &DiffLine> {
+        self.hunks.iter().flat_map(Hunk::added)
+    }
+
+    /// The hunks as diff text, one after another.
+    pub fn render(&self) -> String {
+        self.hunks
+            .iter()
+            .map(Hunk::render)
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+}
+
 /// Parse a file patch into hunks, numbering every added and context line by
 /// its position in the new file.
 pub fn parse_patch(patch: &str) -> Result<Vec<Hunk>> {
@@ -149,6 +219,29 @@ mod tests {
             [41]
         );
         assert!(hunks[1].render().starts_with("@@ -40 +41,2 @@\n+x\n y"));
+    }
+
+    #[test]
+    fn packs_hunks_with_additions_up_to_the_limit() {
+        let hunk = |n: u32, body: &str| {
+            parse_patch(&format!("@@ -{n} +{n} @@\n{body}"))
+                .unwrap()
+                .remove(0)
+        };
+        let (a, b, gone, big) = (
+            hunk(1, "+a"),
+            hunk(5, "+b"),
+            hunk(9, "-gone"),
+            hunk(20, &format!("+{}", "x".repeat(40))),
+        );
+        let p = Chunk::pack([a.clone(), gone, b.clone(), big.clone()], 30);
+        assert_eq!(p.oversized, vec![big]);
+        assert_eq!(p.chunks.len(), 1);
+        assert_eq!(p.chunks[0].hunks(), [a.clone(), b.clone()]);
+        assert_eq!(p.chunks[0].render(), format!("{}\n{}", a.render(), b.render()));
+        assert_eq!(p.chunks[0].render().len(), p.chunks[0].chars);
+        // Too small for both: one chunk each.
+        assert_eq!(Chunk::pack([a, b], 15).chunks.len(), 2);
     }
 
     #[test]

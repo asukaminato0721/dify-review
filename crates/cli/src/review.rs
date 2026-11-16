@@ -7,17 +7,17 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use dify_review_core::Repo;
-use dify_review_core::diff::Hunk;
+use dify_review_core::diff::Chunk;
 use dify_review_core::review::{
     Finding, SummaryFacts, Verdict, decide_at, decide_by_hint, posting_threshold, summary_body,
 };
 use dify_review_core::rules::{Rule, RuleId, RuleSet};
 use dify_review_github::GitHub;
 use dify_review_github::pr::{self, InlineComment, PullRequest, ReviewEvent};
-use dify_review_jev::{Jev, MAX_PATCH_CHARS, Usage, hunk_state};
+use dify_review_jev::{Jev, MAX_PATCH_CHARS, Usage, chunk_state};
 use futures::stream::{self, StreamExt};
 
-/// Hunks of one pull request judged at once.
+/// Chunks of one pull request judged at once.
 const JEV_CONCURRENCY: usize = 8;
 /// Comments one rule may leave on one pull request.
 const MAX_PER_RULE: usize = 2;
@@ -274,7 +274,9 @@ impl Reviewer {
 
         let files = pr::changed_files(&self.gh, &self.repo, pr.number).await?;
         tracing::info!(pr = pr.number, title = %pr.title, files = files.len(), "reviewing");
-        let jobs: Vec<(&str, &Hunk, Vec<&Rule>)> = files
+        // Hints alone have no size limit; Jev has.
+        let limit = self.jev.as_ref().map_or(usize::MAX, |_| MAX_PATCH_CHARS);
+        let jobs: Vec<(&str, Chunk, Vec<&Rule>)> = files
             .iter()
             .flat_map(|file| {
                 let applicable: Vec<&Rule> = self
@@ -283,20 +285,26 @@ impl Reviewer {
                     .iter()
                     .filter(|r| r.applies_to(&file.path))
                     .collect();
-                let any_rule = !applicable.is_empty();
-                file.hunks
-                    .iter()
-                    .filter(move |h| h.has_additions() && any_rule)
-                    .map(move |h| (file.path.as_str(), h, applicable.clone()))
+                let packed = match applicable.is_empty() {
+                    true => Default::default(),
+                    false => Chunk::pack(file.hunks.iter().cloned(), limit),
+                };
+                packed.oversized.iter().for_each(|h| {
+                    tracing::warn!(path = %file.path, header = %h.header, "hunk too large for Jev, skipped")
+                });
+                packed
+                    .chunks
+                    .into_iter()
+                    .map(move |c| (file.path.as_str(), c, applicable.clone()))
             })
             .collect();
         let judged: Vec<_> = stream::iter(jobs)
-            .map(|(path, hunk, rules)| async move {
+            .map(|(path, chunk, rules)| async move {
                 let (verdicts, usage, asked) =
-                    judge(self.jev.as_ref(), pr, path, hunk, &rules).await;
+                    judge(self.jev.as_ref(), pr, path, &chunk, &rules).await;
                 let found: Vec<Finding> = verdicts
                     .into_iter()
-                    .filter_map(|(rule, v)| Finding::new(rule, path, hunk, v))
+                    .filter_map(|(rule, v)| Finding::new(rule, path, &chunk, v))
                     .collect();
                 (found, usage, asked)
             })
@@ -442,32 +450,27 @@ fn short(sha: &str) -> &str {
     &sha[..sha.len().min(10)]
 }
 
-/// One Jev request per hunk carrying every applicable rule; hints without
+/// One Jev request per chunk carrying every applicable rule; hints without
 /// Jev. A new comment needs a margin above the rule's threshold. A failed
-/// request is logged and the hunk gets no comment.
+/// request is logged and the chunk gets no comment.
 async fn judge<'r>(
     jev: Option<&Jev>,
     pr: &PullRequest,
     path: &str,
-    hunk: &Hunk,
+    chunk: &Chunk,
     rules: &[&'r Rule],
 ) -> (Vec<(&'r Rule, Verdict)>, Usage, usize) {
-    let patch = hunk.render();
     match jev {
         None => (
             rules
                 .iter()
-                .filter_map(|r| decide_by_hint(r, hunk).map(|v| (*r, v)))
+                .filter_map(|r| decide_by_hint(r, chunk).map(|v| (*r, v)))
                 .collect(),
             Usage::default(),
             0,
         ),
-        Some(_) if patch.len() > MAX_PATCH_CHARS => {
-            tracing::warn!(path, header = %hunk.header, chars = patch.len(), "hunk too large for Jev, skipped");
-            (Vec::new(), Usage::default(), 0)
-        }
         Some(j) => {
-            let state = hunk_state(&pr.title, path, &patch);
+            let state = chunk_state(&pr.title, path, chunk);
             match j.ask(&state, rules).await {
                 Ok((answers, usage)) => (
                     rules
@@ -475,7 +478,7 @@ async fn judge<'r>(
                         .filter_map(|r| {
                             answers
                                 .get(&r.id.0)
-                                .and_then(|ans| decide_at(r, hunk, ans, posting_threshold(r)))
+                                .and_then(|ans| decide_at(r, chunk, ans, posting_threshold(r)))
                                 .map(|v| (*r, v))
                         })
                         .collect(),
@@ -483,7 +486,7 @@ async fn judge<'r>(
                     1,
                 ),
                 Err(e) => {
-                    tracing::warn!(path, header = %hunk.header, error = %e, "Jev failed, hunk skipped");
+                    tracing::warn!(path, header = %chunk.first().header, error = %e, "Jev failed, chunk skipped");
                     (Vec::new(), Usage::default(), 1)
                 }
             }

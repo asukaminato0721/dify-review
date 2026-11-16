@@ -1,6 +1,7 @@
-//! `dify-review backtest`: ask Jev about every hunk the reviewer commented
-//! on (positives, from labels) and every hunk they let through (the final
-//! diff of the merged pull requests), then report per rule how often it
+//! `dify-review backtest`: ask Jev about every chunk (a file's hunks, as
+//! review sends them) the reviewer commented on (positives, from labels) and
+//! every chunk they let through (the final diff of the merged pull
+//! requests), then report per rule how often it
 //! would have matched the reviewer, and suggest a threshold.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -10,12 +11,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use dify_review_core::backtest::{Label, Row, RuleReport, Sample, evaluate};
-use dify_review_core::diff::{Hunk, NewLine, parse_patch};
+use dify_review_core::diff::{Chunk, Hunk, NewLine, parse_patch};
 use dify_review_core::review::Answer;
 use dify_review_core::rules::{Judge, OptionName, Rule, RuleId, RuleSet};
 use dify_review_core::{PrState, Repo, ReviewThread};
 use dify_review_github::{GitHub, pr};
-use dify_review_jev::{Jev, MAX_PATCH_CHARS, hunk_state};
+use dify_review_jev::{Jev, MAX_PATCH_CHARS, chunk_state};
 use futures::stream::{self, StreamExt};
 use serde::{Deserialize, Serialize};
 
@@ -31,9 +32,9 @@ pub struct BacktestArgs {
     labels: PathBuf,
     #[arg(long, default_value = "rules")]
     rules: PathBuf,
-    /// Full hunks of the labelled comments, fetched once.
-    #[arg(long, default_value = "data/backtest-hunks.jsonl")]
-    hunks: PathBuf,
+    /// The file diff each labelled comment was left on, fetched once.
+    #[arg(long, default_value = "data/backtest-files.jsonl")]
+    files: PathBuf,
     /// Verdicts on live comments (`dify-review feedback`).
     #[arg(long, default_value = "backtest/feedback.toml")]
     feedback: PathBuf,
@@ -69,12 +70,12 @@ struct RawLabel {
     option: Option<OptionName>,
 }
 
-/// A hunk to judge, before Jev has answered.
+/// A chunk to judge, before Jev has answered.
 struct Pending {
     origin: String,
     title: String,
     path: String,
-    hunk: Hunk,
+    chunk: Chunk,
     labels: Vec<Label>,
     rejected: Vec<RuleId>,
 }
@@ -104,7 +105,7 @@ pub async fn run(a: BacktestArgs) -> Result<()> {
     let marks = with_feedback(&labels, &crate::feedback::load(&a.feedback)?, &rules);
 
     let gh = GitHub::from_env().await?;
-    let positives = positive_samples(&gh, &threads, &marks, &a.hunks).await?;
+    let positives = positive_samples(&gh, &threads, &marks, &a.files).await?;
     let negatives = negative_samples(&gh, &threads, &labels).await?;
     tracing::info!(
         positives = positives.len(),
@@ -255,16 +256,16 @@ fn load_threads(path: &Path) -> Result<HashMap<String, ReviewThread>> {
         .collect()
 }
 
-/// The full hunk each labelled comment was left on, as it was when the
-/// comment was written. GitHub's own `diff_hunk` stops at the commented
-/// line, which hides what follows it (a fixture's body under its `def`),
-/// so the hunk is fetched from the pull request's diff at the comment's
-/// commit; when that fails the truncated one is used.
+/// The chunk each labelled comment was left on, as it was when the comment
+/// was written: the file's diff at the comment's commit, packed as review
+/// packs it, and the chunk holding the commented hunk. When the file diff
+/// cannot be fetched, GitHub's own `diff_hunk` is used; it stops at the
+/// commented line, hiding what follows it (a fixture's body under its `def`).
 async fn positive_samples(
     gh: &GitHub,
     threads: &HashMap<String, ReviewThread>,
     marks: &BTreeMap<String, Marks>,
-    hunk_cache: &Path,
+    file_cache: &Path,
 ) -> Result<Vec<Pending>> {
     let wanted = marks
         .iter()
@@ -275,16 +276,16 @@ async fn positive_samples(
                 .with_context(|| format!("labelled comment {url} is not in the threads file"))
         })
         .collect::<Result<Vec<_>>>()?;
-    let mut cache = load_hunk_cache(hunk_cache)?;
+    let mut cache = load_file_cache(file_cache)?;
     let missing: Vec<_> = wanted
         .iter()
         .filter(|(url, _, _)| !cache.contains_key(*url))
         .map(|(url, _, t)| ((*url).clone(), *t))
         .collect();
-    tracing::info!(cached = cache.len(), to_fetch = missing.len(), "full hunks");
+    tracing::info!(cached = cache.len(), to_fetch = missing.len(), "file diffs");
     let fetched = stream::iter(missing)
         .map(|(url, t)| async move {
-            let res = full_hunk(gh, t, &url).await;
+            let res = file_patch(gh, t, &url).await;
             (url, res)
         })
         .buffer_unordered(4)
@@ -294,16 +295,16 @@ async fn positive_samples(
         OpenOptions::new()
             .create(true)
             .append(true)
-            .open(hunk_cache)?,
+            .open(file_cache)?,
     );
     fetched.into_iter().try_for_each(|(url, res)| -> Result<()> {
         match res {
             Ok(patch) => {
-                serde_json::to_writer(&mut out, &HunkLine { comment: url.clone(), patch: patch.clone() })?;
+                serde_json::to_writer(&mut out, &FileLine { comment: url.clone(), patch: patch.clone() })?;
                 out.write_all(b"\n")?;
                 cache.insert(url, patch);
             }
-            Err(e) => tracing::warn!(%url, error = %e, "full hunk unavailable, using the truncated one"),
+            Err(e) => tracing::warn!(%url, error = %e, "file diff unavailable, using the truncated hunk"),
         }
         Ok(())
     })?;
@@ -316,36 +317,50 @@ async fn positive_samples(
             let fetched = cache.get(url).cloned().flatten();
             full += usize::from(fetched.is_some());
             let text = fetched.unwrap_or_else(|| t.diff_hunk.clone());
-            let hunk = parse_patch(&text)
-                .with_context(|| format!("hunk of {url}"))?
-                .pop();
-            // A file-level comment has no hunk to judge.
-            if hunk.is_none() {
-                tracing::warn!(%url, "labelled comment has no diff hunk, left out");
+            let hunks = parse_patch(&text).with_context(|| format!("diff of {url}"))?;
+            let chunk = commented_chunk(t, hunks);
+            // A file-level comment, or one on a hunk without additions or
+            // too large for Jev, has no chunk to judge.
+            if chunk.is_none() {
+                tracing::warn!(%url, "labelled comment has no chunk to judge, left out");
             }
-            Ok(hunk.map(|hunk| Pending {
+            Ok(chunk.map(|chunk| Pending {
                 origin: url.clone(),
                 title: t.pr.title.clone(),
                 path: t.path.clone(),
-                hunk,
+                chunk,
                 labels: ls.labels.clone(),
                 rejected: ls.rejected.clone(),
             }))
         })
         .collect::<Result<Vec<_>>>()?;
-    tracing::info!(full, total = all.len(), "positives with their full hunk");
+    tracing::info!(full, total = all.len(), "positives with their file diff");
     Ok(all.into_iter().flatten().collect())
 }
 
-/// One fetched hunk; `patch: None` records that it could not be found, so
-/// it is not asked again.
+/// The chunk holding the hunk the comment was left on: the one its
+/// `diff_hunk` starts (same header), else the one holding its line.
+fn commented_chunk(t: &ReviewThread, hunks: Vec<Hunk>) -> Option<Chunk> {
+    let header = t.diff_hunk.lines().next().unwrap_or_default();
+    let line = t.original_line.map(NewLine);
+    let commented = |h: &Hunk| {
+        h.header == header || (line.is_some() && h.lines.iter().any(|l| l.new_line == line))
+    };
+    Chunk::pack(hunks, MAX_PATCH_CHARS)
+        .chunks
+        .into_iter()
+        .find(|c| c.hunks().iter().any(commented))
+}
+
+/// One fetched file diff; `patch: None` records that it could not be
+/// found, so it is not asked again.
 #[derive(Serialize, Deserialize)]
-struct HunkLine {
+struct FileLine {
     comment: String,
     patch: Option<String>,
 }
 
-fn load_hunk_cache(path: &Path) -> Result<HashMap<String, Option<String>>> {
+fn load_file_cache(path: &Path) -> Result<HashMap<String, Option<String>>> {
     match path.exists() {
         false => Ok(HashMap::new()),
         true => BufReader::new(File::open(path)?)
@@ -354,17 +369,16 @@ fn load_hunk_cache(path: &Path) -> Result<HashMap<String, Option<String>>> {
             .iter()
             .filter(|l| !l.trim().is_empty())
             .map(|l| {
-                let h: HunkLine = serde_json::from_str(l)?;
+                let h: FileLine = serde_json::from_str(l)?;
                 Ok((h.comment, h.patch))
             })
             .collect(),
     }
 }
 
-/// The hunk of the pull request's diff, at the comment's commit, that the
-/// comment's `diff_hunk` starts: same header, else the one holding its line.
-/// Ok(None): the file or hunk is not in that diff.
-async fn full_hunk(gh: &GitHub, t: &ReviewThread, url: &str) -> Result<Option<String>> {
+/// The commented file's diff in the pull request at the comment's commit.
+/// Ok(None): the file is not in that diff.
+async fn file_patch(gh: &GitHub, t: &ReviewThread, url: &str) -> Result<Option<String>> {
     let id: u64 = url
         .rsplit_once("#discussion_r")
         .and_then(|(_, id)| id.parse().ok())
@@ -372,23 +386,16 @@ async fn full_hunk(gh: &GitHub, t: &ReviewThread, url: &str) -> Result<Option<St
     let commit = pr::review_comment_commit(gh, &t.repo, id).await?;
     let base = pr::pull_request(gh, &t.repo, t.pr.number).await?.base_ref;
     let files = pr::compare_files(gh, &t.repo, &base, &commit).await?;
-    let header = t.diff_hunk.lines().next().unwrap_or_default();
-    let line = t.original_line.map(NewLine);
-    Ok(files
-        .into_iter()
-        .find(|f| f.path == t.path)
-        .and_then(|f| {
-            let by_header = f.hunks.iter().find(|h| h.header == header).cloned();
-            by_header.or_else(|| {
-                f.hunks
-                    .into_iter()
-                    .find(|h| line.is_some() && h.lines.iter().any(|l| l.new_line == line))
-            })
-        })
-        .map(|h| h.render()))
+    Ok(files.into_iter().find(|f| f.path == t.path).map(|f| {
+        f.hunks
+            .iter()
+            .map(Hunk::render)
+            .collect::<Vec<_>>()
+            .join("\n")
+    }))
 }
 
-/// Every added hunk in the final diff of the merged pull requests the labels
+/// Every chunk in the final diff of the merged pull requests the labels
 /// come from: code the reviewer let through. Unmerged pull requests are left
 /// out; their last diff may still hold what was objected to.
 async fn negative_samples(
@@ -416,14 +423,18 @@ async fn negative_samples(
                     .flat_map(|f| {
                         let title = title.clone();
                         let pr_url = pr_url.clone();
-                        f.hunks
+                        let packed = Chunk::pack(f.hunks, MAX_PATCH_CHARS);
+                        packed.oversized.iter().for_each(|h| {
+                            tracing::warn!(path = %f.path, header = %h.header, "hunk too large, left out")
+                        });
+                        packed
+                            .chunks
                             .into_iter()
-                            .filter(|h| h.has_additions())
-                            .map(move |h| Pending {
-                                origin: format!("{pr_url}/files {} `{}`", f.path, h.header),
+                            .map(move |c| Pending {
+                                origin: format!("{pr_url}/files {} `{}`", f.path, c.first().header),
                                 title: title.clone(),
                                 path: f.path.clone(),
-                                hunk: h,
+                                chunk: c,
                                 labels: Vec::new(),
                                 rejected: Vec::new(),
                             })
@@ -458,10 +469,10 @@ fn load_cache(path: &Path) -> Result<HashMap<String, BTreeMap<String, Answer>>> 
 }
 
 /// Answer every sample, from the cache or from Jev. Answers are cached per
-/// rule (keyed by the hunk and that rule's question), so editing one rule
-/// only re-asks that rule; a hunk's missing rules go out in one request.
-/// A failed or oversized sample is dropped from the evaluation instead of
-/// counting as "no comment".
+/// rule (keyed by the chunk and that rule's question), so editing one rule
+/// only re-asks that rule; a chunk's missing rules go out in one request.
+/// A failed sample is dropped from the evaluation instead of counting as
+/// "no comment".
 async fn judge_all(
     jev: &Jev,
     rules: &RuleSet,
@@ -482,18 +493,7 @@ async fn judge_all(
     let jobs: Vec<Job> = pending
         .into_iter()
         .map(|p| {
-            let patch = p.hunk.render();
-            (p, patch)
-        })
-        .filter(|(p, patch)| {
-            let fits = patch.len() <= MAX_PATCH_CHARS;
-            if !fits {
-                tracing::warn!(path = %p.path, chars = patch.len(), "hunk too large, left out");
-            }
-            fits
-        })
-        .map(|(p, patch)| {
-            let state = hunk_state(&p.title, &p.path, &patch);
+            let state = chunk_state(&p.title, &p.path, &p.chunk);
             let keyed = rules
                 .rules()
                 .iter()
@@ -590,7 +590,7 @@ impl Job<'_> {
         Sample {
             origin: self.pending.origin,
             path: self.pending.path,
-            hunk: self.pending.hunk,
+            chunk: self.pending.chunk,
             labels: self.pending.labels,
             rejected: self.pending.rejected,
             answers,
@@ -656,8 +656,8 @@ fn write_report(path: &Path, reports: &[RuleReport], samples: usize) -> Result<(
         "# Backtest".to_owned(),
         String::new(),
         format!(
-            "{samples} hunks. Positives: hunks the reviewer commented on, labelled in `backtest/labels.toml`. \
-             Negatives: added hunks in the final diff of the merged pull requests those comments come from. \
+            "{samples} chunks (a file's hunks, judged together as review does). Positives: chunks the reviewer commented on, labelled in `backtest/labels.toml`. \
+             Negatives: chunks in the final diff of the merged pull requests those comments come from. \
              *hits*: positives the rule would have commented on; *fix*: of those, with the labelled option; \
              *noise*: negatives without the rule's hint pattern it would have commented on; \
              *tolerated*: negatives that do contain the pattern (the reviewer let it through at the time) it would have commented on. \
