@@ -1,0 +1,20 @@
+# Distilled from 4 review threads (the reviewer stopped commenting on this, not because it got rare).
+# Principle: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+severity = 'nit'
+threshold = 0.40
+paths = ['api/**/*.py']
+gate = true
+hint = '''dict\[str, ?(?:object|Any)\]|Mapping\[str, ?(?:object|Any)\]|\]\[["']|\.get\(["'][^"']+["'], ?(?:\{\}|\[\])\)|isinstance\([^)]*,\s*(?:dict|Mapping)\)|TypeAdapter\(dict'''
+examples = [
+  'https://github.com/langgenius/dify/pull/44885#discussion_r4515672207',
+  'https://github.com/langgenius/dify/pull/37660#discussion_r3441137059',
+  'https://github.com/langgenius/dify/pull/35248#discussion_r3087743748',
+  'https://github.com/langgenius/dify/pull/35248#discussion_r3087747017',
+]
+
+
+[noul]
+question = '''
+Does `patch` pass around or inspect loosely typed data instead of parsing it once into a type: values typed dict[str, object], dict[str, Any] or Mapping; chained key lookups like d["a"]["b"]; .get() with {} or [] defaults; isinstance checks on dict values; or hand-written checks that raise on missing or wrong-typed keys, where a pydantic model, dataclass or TypedDict parsed at the boundary would guarantee the shape?'''
+comment = '''
+Parse, don't validate (https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/): model this data once at the boundary as a pydantic model / dataclass / TypedDict (`Model.model_validate(raw)`), and pass the typed value on, instead of passing dicts around and re-checking keys and types where they are used.'''

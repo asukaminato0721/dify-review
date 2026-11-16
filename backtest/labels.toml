@@ -475,19 +475,19 @@ option = 'explicit-params'
 
 [[label]]
 comment = 'https://github.com/langgenius/dify/pull/44885#discussion_r4515672207'
-rule = 'model-nested-data'
+rule = 'parse-dont-validate'
 
 [[label]]
 comment = 'https://github.com/langgenius/dify/pull/37660#discussion_r3441137059'
-rule = 'model-nested-data'
+rule = 'parse-dont-validate'
 
 [[label]]
 comment = 'https://github.com/langgenius/dify/pull/35248#discussion_r3087743748'
-rule = 'model-nested-data'
+rule = 'parse-dont-validate'
 
 [[label]]
 comment = 'https://github.com/langgenius/dify/pull/35248#discussion_r3087747017'
-rule = 'model-nested-data'
+rule = 'parse-dont-validate'
 
 [[label]]
 comment = 'https://github.com/langgenius/dify/pull/44837#discussion_r4424553072'

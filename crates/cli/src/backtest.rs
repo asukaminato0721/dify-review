@@ -379,9 +379,11 @@ fn load_cache(path: &Path) -> Result<HashMap<String, BTreeMap<String, Answer>>> 
     }
 }
 
-/// Answer every sample, from the cache or from Jev; new answers are
-/// appended to the cache as they arrive. A failed or oversized sample is
-/// dropped from the evaluation instead of counting as "no comment".
+/// Answer every sample, from the cache or from Jev. Answers are cached per
+/// rule (keyed by the hunk and that rule's question), so editing one rule
+/// only re-asks that rule; a hunk's missing rules go out in one request.
+/// A failed or oversized sample is dropped from the evaluation instead of
+/// counting as "no comment".
 async fn judge_all(
     jev: &Jev,
     rules: &RuleSet,
@@ -399,7 +401,7 @@ async fn judge_all(
             .append(true)
             .open(cache_path)?,
     );
-    let jobs: Vec<_> = pending
+    let jobs: Vec<Job> = pending
         .into_iter()
         .map(|p| {
             let patch = p.hunk.render();
@@ -413,64 +415,77 @@ async fn judge_all(
             fits
         })
         .map(|(p, patch)| {
-            let applicable: Vec<&Rule> = rules
+            let state = hunk_state(&p.title, &p.path, &patch);
+            let keyed = rules
                 .rules()
                 .iter()
                 .filter(|r| r.applies_to(&p.path))
+                .map(|r| Ok((r, jev.fingerprint(&state, &[r])?)))
+                .collect::<Result<Vec<_>>>()?;
+            let cached_answer =
+                |r: &Rule, key: &str| cache.get(key).and_then(|m| m.get(&r.id.0)).cloned();
+            let known: BTreeMap<String, Answer> = keyed
+                .iter()
+                .filter_map(|(r, key)| cached_answer(r, key).map(|a| (r.id.0.clone(), a)))
                 .collect();
-            let state = hunk_state(&p.title, &p.path, &patch);
-            let key = jev.fingerprint(&state, &applicable)?;
-            Ok((p, applicable, state, key))
+            let missing: Vec<(&Rule, String)> = keyed
+                .into_iter()
+                .filter(|(r, _)| !known.contains_key(&r.id.0))
+                .collect();
+            Ok(Job {
+                pending: p,
+                state,
+                known,
+                missing,
+            })
         })
         .collect::<Result<_>>()?;
 
-    let (cached, to_ask): (Vec<_>, Vec<_>) = jobs
-        .into_iter()
-        .partition(|(_, applicable, _, key)| applicable.is_empty() || cache.contains_key(key));
+    let (complete, to_ask): (Vec<Job>, Vec<Job>) =
+        jobs.into_iter().partition(|j| j.missing.is_empty());
     let total = to_ask.len();
-    tracing::info!(cached = cached.len(), to_ask = total, "asking Jev");
+    tracing::info!(cached = complete.len(), to_ask = total, "asking Jev");
 
-    let mut samples: Vec<Sample> = cached
+    let mut samples: Vec<Sample> = complete
         .into_iter()
-        .map(|(p, _, _, key)| Sample {
-            origin: p.origin,
-            path: p.path,
-            hunk: p.hunk,
-            labels: p.labels,
-            answers: cache.get(&key).cloned().unwrap_or_default(),
-        })
+        .map(|j| j.into_sample(BTreeMap::new()))
         .collect();
     let mut answered = stream::iter(to_ask)
-        .map(|(p, applicable, state, key)| async move {
-            let res = jev.ask(&state, &applicable).await;
-            (p, key, res)
+        .map(|j| async move {
+            let ask: Vec<&Rule> = j.missing.iter().map(|(r, _)| *r).collect();
+            let res = jev.ask(&j.state, &ask).await;
+            (j, res)
         })
         .buffer_unordered(concurrency.max(1));
     let mut done = 0usize;
     let mut tokens = 0u64;
-    while let Some((p, key, res)) = answered.next().await {
+    while let Some((j, res)) = answered.next().await {
         done += 1;
         match res {
             Ok((answers, usage)) => {
                 tokens += usage.input_tokens;
-                serde_json::to_writer(
-                    &mut out,
-                    &CacheLine {
-                        key: key.clone(),
-                        answers: answers.clone(),
-                    },
-                )?;
-                out.write_all(b"\n")?;
-                cache.insert(key, answers.clone());
-                samples.push(Sample {
-                    origin: p.origin,
-                    path: p.path,
-                    hunk: p.hunk,
-                    labels: p.labels,
-                    answers,
-                });
+                j.missing.iter().try_for_each(|(r, key)| -> Result<()> {
+                    let one: BTreeMap<String, Answer> = answers
+                        .get(&r.id.0)
+                        .map(|a| (r.id.0.clone(), a.clone()))
+                        .into_iter()
+                        .collect();
+                    serde_json::to_writer(
+                        &mut out,
+                        &CacheLine {
+                            key: key.clone(),
+                            answers: one.clone(),
+                        },
+                    )?;
+                    out.write_all(b"\n")?;
+                    cache.insert(key.clone(), one);
+                    Ok(())
+                })?;
+                samples.push(j.into_sample(answers));
             }
-            Err(e) => tracing::warn!(path = %p.path, error = %e, "Jev failed, sample left out"),
+            Err(e) => {
+                tracing::warn!(path = %j.pending.path, error = %e, "Jev failed, sample left out")
+            }
         }
         if done.is_multiple_of(100) {
             out.flush()?;
@@ -479,6 +494,29 @@ async fn judge_all(
     }
     out.flush()?;
     Ok((samples, total, tokens))
+}
+
+/// A sample with the answers already cached and the rules still to ask.
+struct Job<'r> {
+    pending: Pending,
+    state: serde_json::Value,
+    known: BTreeMap<String, Answer>,
+    /// Rules without a cached answer, with their cache keys.
+    missing: Vec<(&'r Rule, String)>,
+}
+
+impl Job<'_> {
+    fn into_sample(self, fresh: BTreeMap<String, Answer>) -> Sample {
+        let mut answers = self.known;
+        answers.extend(fresh);
+        Sample {
+            origin: self.pending.origin,
+            path: self.pending.path,
+            hunk: self.pending.hunk,
+            labels: self.pending.labels,
+            answers,
+        }
+    }
 }
 
 /// The row at the suggested threshold, else at the rule's current one.
