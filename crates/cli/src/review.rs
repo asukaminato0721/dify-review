@@ -3,7 +3,10 @@
 //! `watch`, which reviews the pull requests someone mentioned the bot on.
 
 use std::collections::{HashMap, HashSet};
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use anyhow::Result;
 use dify_review_core::Repo;
@@ -53,6 +56,9 @@ pub struct ReviewOpts {
     /// Post the review. Without this flag nothing is written to GitHub.
     #[arg(long)]
     post: bool,
+    /// Heads reviewed without posting anything, so they are not judged again.
+    #[arg(long, default_value = "data/reviewed-heads.txt")]
+    state: PathBuf,
 }
 
 pub async fn run(a: ReviewArgs) -> Result<()> {
@@ -66,6 +72,8 @@ pub struct Reviewer {
     jev: Option<Jev>,
     rules: RuleSet,
     opts: ReviewOpts,
+    /// Heads reviewed without a posted review (see `remember`).
+    reviewed: Mutex<HashSet<String>>,
 }
 
 /// Who asked for a review, if someone did.
@@ -92,7 +100,19 @@ impl Reviewer {
             ),
         }
         let gh = GitHub::from_env().await?;
+        let reviewed = match opts.state.exists() {
+            true => fs::read_to_string(&opts.state)?
+                .lines()
+                .map(|l| l.trim().to_owned())
+                .filter(|l| !l.is_empty())
+                .collect(),
+            false => HashSet::new(),
+        };
+        if let Some(dir) = opts.state.parent().filter(|d| !d.as_os_str().is_empty()) {
+            fs::create_dir_all(dir)?;
+        }
         Ok(Self {
+            reviewed: Mutex::new(reviewed),
             gh,
             repo,
             jev,
@@ -107,7 +127,12 @@ impl Reviewer {
     pub async fn review(&self, number: u64, ask: Option<Ask<'_>>, force: bool) -> Result<()> {
         let pr = pr::pull_request(&self.gh, &self.repo, number).await?;
         let history = pr::history(&self.gh, &self.repo, number).await?;
-        let seen = history.heads.contains(&pr.head.0);
+        let seen = history.heads.contains(&pr.head.0)
+            || self
+                .reviewed
+                .lock()
+                .expect("reviewed-heads lock")
+                .contains(&pr.head.0);
         let asked = force || ask.is_some();
         match (seen, asked) {
             _ if !pr.open => {
@@ -274,10 +299,6 @@ impl Reviewer {
             requester: ask.as_ref().map(|a| a.author),
             trigger: ask.as_ref().map(|a| a.comment_id),
         };
-        let event = match facts.new > 0 || still_open > 0 || conflict || ci.is_some() {
-            true => ReviewEvent::RequestChanges,
-            false => ReviewEvent::Comment,
-        };
         let comments: Vec<_> = selected
             .iter()
             .map(|f| InlineComment {
@@ -286,18 +307,72 @@ impl Reviewer {
                 body: f.body(),
             })
             .collect();
-        self.post(pr, &facts, &comments, event).await?;
-        if self.opts.post && event == ReviewEvent::Comment {
-            let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
-            match pr::dismiss_bot_change_requests(&self.gh, &self.repo, pr.number, &msg).await {
-                Ok(0) => {}
-                Ok(n) => eprintln!("dismissed {n} earlier change request(s)"),
-                Err(e) => {
-                    tracing::warn!(pr = pr.number, error = %e, "could not dismiss earlier change requests")
+        // Post only what the author must act on: new suggestions, a conflict,
+        // failing CI. Unresolved threads alone are already visible on the pull
+        // request. An explicit ask always gets an answer.
+        let act_on = facts.new > 0 || conflict || ci.is_some();
+        let standing = match act_on {
+            true => Vec::new(),
+            false => pr::bot_change_requests(&self.gh, &self.repo, pr.number).await?,
+        };
+        let clear = still_open == 0;
+        match (act_on, ask.is_some(), clear && !standing.is_empty()) {
+            (true, _, _) => {
+                self.post(pr, &facts, &comments, ReviewEvent::RequestChanges)
+                    .await
+            }
+            // Everything was dealt with: say so, and lift the earlier change request.
+            (false, _, true) => {
+                self.post(pr, &facts, &[], ReviewEvent::Comment).await?;
+                if self.opts.post {
+                    let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
+                    match pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
+                        .await
+                    {
+                        Ok(()) => {
+                            eprintln!("dismissed {} earlier change request(s)", standing.len())
+                        }
+                        Err(e) => {
+                            tracing::warn!(pr = pr.number, error = %e, "could not dismiss earlier change requests")
+                        }
+                    }
                 }
+                Ok(())
+            }
+            (false, true, false) => self.post(pr, &facts, &[], ReviewEvent::Comment).await,
+            (false, false, false) => {
+                eprintln!(
+                    "PR #{}: nothing to act on at {}{}; not posting",
+                    pr.number,
+                    short(&pr.head.0),
+                    match still_open {
+                        0 => String::new(),
+                        n => format!(" ({n} unresolved thread(s) remain)"),
+                    }
+                );
+                self.remember(&pr.head.0)
             }
         }
-        Ok(())
+    }
+
+    /// Record a head reviewed without posting, so the next pass does not
+    /// judge it again. Heads with a posted review are recorded in its marker.
+    fn remember(&self, head: &str) -> Result<()> {
+        match self.opts.post {
+            false => Ok(()),
+            true => {
+                self.reviewed
+                    .lock()
+                    .expect("reviewed-heads lock")
+                    .insert(head.to_owned());
+                let mut f = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&self.opts.state)?;
+                writeln!(f, "{head}")?;
+                Ok(())
+            }
+        }
     }
 
     async fn post(

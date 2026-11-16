@@ -639,15 +639,13 @@ pub async fn resolve_thread(gh: &GitHub, thread_id: &str) -> Result<()> {
     Ok(())
 }
 
-/// Dismiss dify-review's own earlier change requests on the pull request,
-/// once nothing is left to change.
-pub async fn dismiss_bot_change_requests(
+/// dify-review's change requests on the pull request that still stand.
+pub async fn bot_change_requests(
     gh: &GitHub,
     repo: &Repo,
     number: u64,
-    message: &str,
-) -> Result<usize> {
-    let open: Vec<ReviewSummary> = reviews(gh, repo, number)
+) -> Result<Vec<ReviewSummary>> {
+    Ok(reviews(gh, repo, number)
         .await?
         .into_iter()
         .filter(|r| r.state == "CHANGES_REQUESTED")
@@ -656,8 +654,18 @@ pub async fn dismiss_bot_change_requests(
                 .as_deref()
                 .is_some_and(|b| !marker_values(b, "head").is_empty())
         })
-        .collect();
-    for r in &open {
+        .collect())
+}
+
+/// Dismiss the given change requests, once nothing is left to change.
+pub async fn dismiss_reviews(
+    gh: &GitHub,
+    repo: &Repo,
+    number: u64,
+    reviews: &[ReviewSummary],
+    message: &str,
+) -> Result<()> {
+    for r in reviews {
         let _: serde_json::Value = gh
             .put(
                 &format!("/repos/{repo}/pulls/{number}/reviews/{}/dismissals", r.id),
@@ -665,7 +673,7 @@ pub async fn dismiss_bot_change_requests(
             )
             .await?;
     }
-    Ok(open.len())
+    Ok(())
 }
 
 /// A CI check that failed on a commit.
