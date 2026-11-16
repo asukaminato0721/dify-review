@@ -1,5 +1,6 @@
 # Distilled from 4 review threads (the reviewer stopped commenting on this, not because it got rare).
 # Principle: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
+# Tests too: `assert isinstance(x, dict)` narrowing is still validating; parse into a model instead.
 severity = 'nit'
 threshold = 0.40
 paths = ['api/**/*.py']
