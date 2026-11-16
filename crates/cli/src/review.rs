@@ -109,7 +109,6 @@ impl Reviewer {
         let history = pr::history(&self.gh, &self.repo, number).await?;
         let seen = history.heads.contains(&pr.head.0);
         let asked = force || ask.is_some();
-        let conflict_flagged = history.conflicts.contains(&pr.head.0);
         match (seen, asked) {
             _ if !pr.open => {
                 eprintln!("PR #{number}: not open, skipped");
@@ -119,32 +118,58 @@ impl Reviewer {
                 eprintln!("PR #{number}: draft, skipped until ready for review");
                 Ok(())
             }
-            // The head was reviewed, but the base moved on and it now conflicts.
-            (true, false) if pr.conflicted() && !conflict_flagged => {
-                eprintln!(
-                    "PR #{number}: head {} now conflicts with {}",
-                    short(&pr.head.0),
-                    pr.base_ref
-                );
-                let facts = SummaryFacts {
-                    head: &pr.head.0,
-                    new: 0,
-                    still_open: 0,
-                    conflict_base: Some(&pr.base_ref),
-                    requester: None,
-                    trigger: None,
-                };
-                self.post(&pr, &facts, &[], ReviewEvent::RequestChanges)
-                    .await
+            (true, false) => self.recheck(&pr, &history).await,
+            _ => {
+                let failing = pr::failing_checks(&self.gh, &self.repo, &pr.head).await?;
+                self.judge_and_post(&pr, ask, &failing).await
             }
-            (true, false) => {
+        }
+    }
+
+    /// A head already reviewed: only the cheap checks, no Jev. Since the
+    /// review, the base may have moved on (a merge conflict) or CI may have
+    /// finished and failed; each is flagged once per head.
+    async fn recheck(&self, pr: &PullRequest, history: &pr::History) -> Result<()> {
+        let head = &pr.head.0;
+        let conflict = pr.conflicted() && !history.conflicts.contains(head);
+        let failing = match history.ci.contains(head) {
+            true => Vec::new(),
+            false => pr::failing_checks(&self.gh, &self.repo, &pr.head).await?,
+        };
+        match (conflict, failing.is_empty()) {
+            (false, true) => {
                 eprintln!(
-                    "PR #{number}: head {} already reviewed (use --force to review again)",
-                    short(&pr.head.0)
+                    "PR #{}: head {} already reviewed, nothing new",
+                    pr.number,
+                    short(head)
                 );
                 Ok(())
             }
-            _ => self.judge_and_post(&pr, ask).await,
+            _ => {
+                eprintln!(
+                    "PR #{}: head {}{}{}",
+                    pr.number,
+                    short(head),
+                    if conflict { " now conflicts" } else { "" },
+                    if failing.is_empty() {
+                        ""
+                    } else {
+                        ", CI failing"
+                    }
+                );
+                let ci = ci_list(&failing);
+                let facts = SummaryFacts {
+                    head,
+                    new: 0,
+                    still_open: 0,
+                    conflict_base: conflict.then_some(pr.base_ref.as_str()),
+                    ci_failing: ci.as_deref(),
+                    requester: None,
+                    trigger: None,
+                };
+                self.post(pr, &facts, &[], ReviewEvent::RequestChanges)
+                    .await
+            }
         }
     }
 
@@ -153,11 +178,16 @@ impl Reviewer {
     /// is a new suggestion, an earlier one still open, or a merge conflict;
     /// otherwise it says nothing is left and dismisses the bot's earlier
     /// change requests.
-    async fn judge_and_post(&self, pr: &PullRequest, ask: Option<Ask<'_>>) -> Result<()> {
-        let threads = pr::bot_threads(&self.gh, &self.repo, pr.number).await?;
+    async fn judge_and_post(
+        &self,
+        pr: &PullRequest,
+        ask: Option<Ask<'_>>,
+        failing: &[pr::FailingCheck],
+    ) -> Result<()> {
+        let threads = pr::review_threads(&self.gh, &self.repo, pr.number).await?;
         let outdated: Vec<_> = threads
             .iter()
-            .filter(|t| t.outdated && !t.resolved)
+            .filter(|t| t.bot && t.outdated && !t.resolved)
             .collect();
         if self.opts.post {
             for t in &outdated {
@@ -180,12 +210,14 @@ impl Reviewer {
         // problem that survived a push under an outdated comment is raised again.
         let posted: HashSet<String> = threads
             .iter()
-            .filter(|t| !t.outdated)
+            .filter(|t| t.bot && !t.outdated)
             .filter_map(|t| t.key.clone())
             .collect();
+        // Unresolved threads by anyone keep the review open; the bot's own
+        // outdated ones were just resolved above.
         let still_open = threads
             .iter()
-            .filter(|t| !t.outdated && !t.resolved)
+            .filter(|t| !t.resolved && !(t.bot && t.outdated))
             .count();
 
         let files = pr::changed_files(&self.gh, &self.repo, pr.number).await?;
@@ -232,15 +264,17 @@ impl Reviewer {
         report(pr, &selected, &posted, asked, usage);
 
         let conflict = pr.conflicted();
+        let ci = ci_list(failing);
         let facts = SummaryFacts {
             head: &pr.head.0,
             new: selected.len(),
             still_open,
             conflict_base: conflict.then_some(pr.base_ref.as_str()),
+            ci_failing: ci.as_deref(),
             requester: ask.as_ref().map(|a| a.author),
             trigger: ask.as_ref().map(|a| a.comment_id),
         };
-        let event = match facts.new > 0 || still_open > 0 || conflict {
+        let event = match facts.new > 0 || still_open > 0 || conflict || ci.is_some() {
             true => ReviewEvent::RequestChanges,
             false => ReviewEvent::Comment,
         };
@@ -290,6 +324,20 @@ impl Reviewer {
             }
         }
     }
+}
+
+/// Failing checks as markdown links, or None when CI is not failing.
+fn ci_list(failing: &[pr::FailingCheck]) -> Option<String> {
+    (!failing.is_empty()).then(|| {
+        failing
+            .iter()
+            .map(|c| match c.url.is_empty() {
+                true => c.name.clone(),
+                false => format!("[{}]({})", c.name, c.url),
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    })
 }
 
 fn short(sha: &str) -> &str {

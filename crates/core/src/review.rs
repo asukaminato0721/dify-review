@@ -203,10 +203,13 @@ pub struct SummaryFacts<'a> {
     pub head: &'a str,
     /// Inline comments posted with this review.
     pub new: usize,
-    /// Earlier suggestions whose lines are unchanged and still unresolved.
+    /// Review threads, by anyone, still unresolved (the bot's own outdated
+    /// ones excluded: it resolves those).
     pub still_open: usize,
     /// Base branch the head conflicts with.
     pub conflict_base: Option<&'a str>,
+    /// Failing CI checks, already written as markdown links.
+    pub ci_failing: Option<&'a str>,
     pub requester: Option<&'a str>,
     pub trigger: Option<u64>,
 }
@@ -230,6 +233,10 @@ pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
             format!("This branch has conflicts with `{b}`: please rebase onto the latest `{b}`. ")
         })
         .unwrap_or_default();
+    let ci = f
+        .ci_failing
+        .map(|list| format!("CI is failing: {list}. Please fix it. "))
+        .unwrap_or_default();
     let found = match f.new {
         0 => String::new(),
         1 => format!(
@@ -241,10 +248,10 @@ pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
     };
     let open = match f.still_open {
         0 => String::new(),
-        1 => "1 earlier suggestion is still open.".to_owned(),
-        n => format!("{n} earlier suggestions are still open."),
+        1 => "1 review thread is still unresolved.".to_owned(),
+        n => format!("{n} review threads are still unresolved."),
     };
-    let what = match (f.new, f.still_open, conflict.is_empty()) {
+    let what = match (f.new, f.still_open, conflict.is_empty() && ci.is_empty()) {
         (0, 0, true) => format!("Nothing to flag at {at}."),
         (0, _, _) => format!("Checked {at}. {open}"),
         _ => [found, open]
@@ -258,7 +265,13 @@ pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
     if f.conflict_base.is_some() {
         marker = marker.replacen(" -->", &format!(";conflict={} -->", f.head), 1);
     }
-    format!("{who}{conflict}{}{SUMMARY_FOOTER}{marker}", what.trim_end())
+    if f.ci_failing.is_some() {
+        marker = marker.replacen(" -->", &format!(";ci={} -->", f.head), 1);
+    }
+    format!(
+        "{who}{conflict}{ci}{}{SUMMARY_FOOTER}{marker}",
+        what.trim_end()
+    )
 }
 
 /// A summary posted in an earlier format, rewritten as `summary_body` would
@@ -286,11 +299,18 @@ pub fn refreshed_summary(body: &str, repo: &Repo, pr: u64) -> Option<String> {
         .split("conflicts with `")
         .nth(1)
         .and_then(|r| r.split('`').next());
+    let ci_failing = text
+        .split("CI is failing: ")
+        .nth(1)
+        .and_then(|r| r.split(". Please fix it.").next());
     let facts = SummaryFacts {
         head: &head,
         new: count_before(" inline suggestion").unwrap_or(0),
-        still_open: count_before(" earlier suggestion").unwrap_or(0),
+        still_open: count_before(" review thread")
+            .or_else(|| count_before(" earlier suggestion"))
+            .unwrap_or(0),
         conflict_base,
+        ci_failing,
         requester,
         trigger,
     };
@@ -461,6 +481,7 @@ mod tests {
             new,
             still_open,
             conflict_base,
+            ci_failing: None,
             requester,
             trigger,
         };
@@ -487,12 +508,25 @@ mod tests {
 
         let conflicted = summary_body(&repo, 7, &facts(2, 1, Some("main"), None, None));
         assert!(conflicted.starts_with("This branch has conflicts with `main`: please rebase onto the latest `main`. 2 inline suggestions"));
-        assert!(conflicted.contains("1 earlier suggestion is still open."));
+        assert!(conflicted.contains("1 review thread is still unresolved."));
+        let older = conflicted.replace(
+            "1 review thread is still unresolved.",
+            "1 earlier suggestion is still open.",
+        );
+        assert_eq!(refreshed_summary(&older, &repo, 7).unwrap(), conflicted);
         assert_eq!(
             marker_values(&conflicted, "conflict"),
             vec![head.to_owned()]
         );
         assert_eq!(refreshed_summary(&conflicted, &repo, 7), None);
+        let ci = SummaryFacts {
+            ci_failing: Some("[Python Style](https://x/1), [Lint](https://x/2)"),
+            ..facts(0, 0, Some("main"), None, None)
+        };
+        let ci_body = summary_body(&repo, 7, &ci);
+        assert!(ci_body.starts_with("This branch has conflicts with `main`: please rebase onto the latest `main`. CI is failing: [Python Style](https://x/1), [Lint](https://x/2). Please fix it. Checked"));
+        assert_eq!(marker_values(&ci_body, "ci"), vec![head.to_owned()]);
+        assert_eq!(refreshed_summary(&ci_body, &repo, 7), None);
         let only_open = summary_body(&repo, 7, &facts(0, 2, None, None, None));
         assert!(only_open.starts_with("Checked [`d689cee60f`]"));
         assert_eq!(refreshed_summary(&only_open, &repo, 7), None);

@@ -1,11 +1,11 @@
 //! `dify-review watch`: one pass over the pull requests the bot should look
 //! at; run it on a schedule.
 //!
-//! - Open pull requests assigned to `--assignee` and updated since `--since`
-//!   (all of them with `--all-assigned`): each head is reviewed once, so a
-//!   new push gets a new review and an unchanged head is left alone, except
-//!   that a merge conflict appearing later is still flagged. Drafts wait
-//!   until they are ready.
+//! - Every open pull request assigned to `--assignee`. A new head gets a
+//!   Jev review, once; a head already reviewed only gets the cheap checks
+//!   (merge conflict, failing CI), each flagged once per head. Those change
+//!   without touching the pull request's update time, so all assigned pull
+//!   requests are looked at every pass. Drafts wait until they are ready.
 //! - Pull requests where a member mentions `@dify-codereview`: answered once
 //!   per mention, even if the head was already reviewed.
 
@@ -25,18 +25,13 @@ pub const DEFAULT_HANDLE: &str = "@dify-codereview";
 pub struct WatchArgs {
     #[arg(long, default_value = "langgenius/dify")]
     repo: Repo,
-    /// Consider activity since: 2h, 1d or a date. Overlap between passes is
-    /// harmless: heads and mentions are only handled once.
+    /// Consider mentions since: 2h, 1d or a date. Overlap between passes is
+    /// harmless: mentions are only answered once.
     #[arg(long, default_value = "2h")]
     since: String,
-    /// Review open pull requests assigned to this login (updated since --since).
+    /// Review open pull requests assigned to this login.
     #[arg(long)]
     assignee: Option<String>,
-    /// Look at every open assigned pull request, not only recently updated
-    /// ones: for a cold start, or a periodic sweep for merge conflicts that
-    /// appear when the base moves (that does not update the pull request).
-    #[arg(long)]
-    all_assigned: bool,
     /// Mention that asks for a review.
     #[arg(long, default_value = DEFAULT_HANDLE)]
     handle: String,
@@ -52,21 +47,13 @@ pub async fn run(a: WatchArgs) -> Result<()> {
     // The latest mention per pull request stands for all of them.
     let mentioned: BTreeMap<u64, Trigger> = triggers.into_iter().map(|t| (t.pr, t)).collect();
     let assigned: Vec<u64> = match &a.assignee {
-        Some(login) => {
-            let window = (!a.all_assigned).then_some(since);
-            pr::assigned_open(&reviewer.gh, &a.repo, login, window).await?
-        }
+        Some(login) => pr::assigned_open(&reviewer.gh, &a.repo, login, None).await?,
         None => Vec::new(),
     };
     eprintln!(
-        "{} open assigned to {} ({}); {} mentioning {} since {since}",
+        "{} open assigned to {}; {} mentioning {} since {since}",
         assigned.len(),
         a.assignee.as_deref().unwrap_or("-"),
-        if a.all_assigned {
-            "all"
-        } else {
-            "updated in the window"
-        },
         mentioned.len(),
         a.handle
     );

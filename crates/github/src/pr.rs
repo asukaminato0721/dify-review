@@ -239,6 +239,8 @@ pub struct History {
     pub triggers: HashSet<u64>,
     /// Heads whose merge conflict was already pointed out.
     pub conflicts: HashSet<String>,
+    /// Heads whose failing CI was already pointed out.
+    pub ci: HashSet<String>,
 }
 
 pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
@@ -260,6 +262,7 @@ pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
             .iter()
             .flat_map(|b| marker_values(b, "conflict"))
             .collect(),
+        ci: bodies.iter().flat_map(|b| marker_values(b, "ci")).collect(),
     })
 }
 
@@ -499,15 +502,17 @@ pub async fn edit_review(gh: &GitHub, repo: &Repo, number: u64, id: u64, body: &
     Ok(())
 }
 
-/// A review thread a dify-review comment started.
+/// A review thread on the pull request, by anyone.
 #[derive(Debug, Clone)]
-pub struct BotThread {
+pub struct ThreadState {
     /// GraphQL node id, for resolving it.
     pub id: String,
+    /// A dify-review comment started it.
+    pub bot: bool,
     pub resolved: bool,
     /// The commented lines changed after the comment.
     pub outdated: bool,
-    /// The dedupe key in the comment's marker.
+    /// The dedupe key in the bot comment's marker.
     pub key: Option<String>,
 }
 
@@ -576,8 +581,8 @@ impl crate::client::HasRateLimit for ThreadsData {
     }
 }
 
-/// Every review thread on the pull request that a dify-review comment started.
-pub async fn bot_threads(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<BotThread>> {
+/// Every review thread on the pull request.
+pub async fn review_threads(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<ThreadState>> {
     let mut found = Vec::new();
     let mut after: Option<String> = None;
     let mut more = true;
@@ -593,15 +598,20 @@ pub async fn bot_threads(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<Bo
             .and_then(|r| r.pull_request)
             .with_context(|| format!("pull request {number} not found"))?
             .review_threads;
-        found.extend(conn.nodes.into_iter().filter_map(|t| {
-            let body = &t.comments.nodes.first()?.body;
-            marker_values(body, "rule").first()?;
-            Some(BotThread {
+        found.extend(conn.nodes.into_iter().map(|t| {
+            let body = t
+                .comments
+                .nodes
+                .first()
+                .map(|c| c.body.as_str())
+                .unwrap_or_default();
+            ThreadState {
                 id: t.id,
+                bot: !marker_values(body, "rule").is_empty(),
                 resolved: t.is_resolved,
                 outdated: t.is_outdated,
                 key: marker_values(body, "key").into_iter().next(),
-            })
+            }
         }));
         more = conn.page_info.has_next_page;
         after = conn.page_info.end_cursor;
@@ -656,4 +666,66 @@ pub async fn dismiss_bot_change_requests(
             .await?;
     }
     Ok(open.len())
+}
+
+/// A CI check that failed on a commit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FailingCheck {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Deserialize)]
+struct RawCheckRuns {
+    check_runs: Vec<RawCheckRun>,
+}
+
+#[derive(Deserialize)]
+struct RawCheckRun {
+    name: String,
+    #[serde(default)]
+    conclusion: Option<String>,
+    html_url: Option<String>,
+    #[serde(default)]
+    app: Option<RawApp>,
+}
+
+#[derive(Deserialize)]
+struct RawApp {
+    slug: String,
+}
+
+/// GitHub Actions jobs that failed on `sha`: the repository's own CI. Checks
+/// from other apps (autofix.ci) and commit statuses (codecov coverage gates)
+/// are left out, and so are runs still going or cancelled (often superseded
+/// by a newer run).
+pub async fn failing_checks(
+    gh: &GitHub,
+    repo: &Repo,
+    sha: &CommitSha,
+) -> Result<Vec<FailingCheck>> {
+    let runs: RawCheckRuns = gh
+        .get(&format!(
+            "/repos/{repo}/commits/{}/check-runs?per_page=100",
+            sha.0
+        ))
+        .await?;
+    let mut failing: Vec<FailingCheck> = runs
+        .check_runs
+        .into_iter()
+        .filter(|r| r.app.as_ref().is_some_and(|a| a.slug == "github-actions"))
+        .filter(|r| {
+            matches!(
+                r.conclusion.as_deref(),
+                Some("failure" | "timed_out" | "startup_failure")
+            )
+        })
+        .map(|r| FailingCheck {
+            url: r.html_url.unwrap_or_default(),
+            name: r.name,
+        })
+        .collect();
+    failing.sort_by(|a, b| a.name.cmp(&b.name));
+    failing.dedup_by(|a, b| a.name == b.name);
+    Ok(failing)
 }
