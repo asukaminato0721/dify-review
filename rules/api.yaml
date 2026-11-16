@@ -1,0 +1,270 @@
+# Rules distilled from asukaminato0721's inline reviews on langgenius/dify,
+# 2026-05-20..2026-11-16 (201 threads). Regenerate examples with the distill script.
+# kind: grep = deterministic regex on hunk lines; jev = Jev noul question on the hunk;
+#       grep+jev = grep first, Jev as the fallback for what the regex misses.
+# lines: added = '+' lines only; not-removed = '+' and context lines.
+
+# covered_by: an existing dify CI guard already blocks this; dify-review skips it.
+# propose_guard: deterministic and not yet guarded; better as a new
+#   scripts/ast_grep_rules/*.yml in dify than as a review comment.
+
+rules:
+  - id: no-type-ignore
+    kind: grep
+    propose_guard: true
+    severity: should
+    paths: ["api/**/*.py"]
+    lines: added
+    match: "#\\s*(?:pyrefly|type)\\s*:\\s*ignore"
+    comment: "Please fix the type instead of suppressing it: pass the real enum member / model / class the signature declares, or type the production code. A test that needs an ignore to call something is usually testing what the type checker already rejects."
+    support: 16
+    examples:
+      - https://github.com/langgenius/dify/pull/45768#discussion_r4500494343
+      - https://github.com/langgenius/dify/pull/46192#discussion_r4556514304
+      - https://github.com/langgenius/dify/pull/46191#discussion_r4556533882
+      - https://github.com/langgenius/dify/pull/46188#discussion_r4553205169
+      - https://github.com/langgenius/dify/pull/45769#discussion_r4500489615
+      - https://github.com/langgenius/dify/pull/45766#discussion_r4500498642
+      - https://github.com/langgenius/dify/pull/45767#discussion_r4500496923
+      - https://github.com/langgenius/dify/pull/45770#discussion_r4500488536
+      - https://github.com/langgenius/dify/pull/45772#discussion_r4500484774
+      - https://github.com/langgenius/dify/pull/45773#discussion_r4500485840
+      - https://github.com/langgenius/dify/pull/45773#discussion_r4501140185
+      - https://github.com/langgenius/dify/pull/45771#discussion_r4500487530
+      - https://github.com/langgenius/dify/pull/45726#discussion_r4491689346
+      - https://github.com/langgenius/dify/pull/45726#discussion_r4491690383
+      - https://github.com/langgenius/dify/pull/44875#discussion_r4408651755
+      - https://github.com/langgenius/dify/pull/45256#discussion_r4440387904
+  - id: no-test-for-type-errors
+    kind: jev
+    severity: should
+    paths: ["api/tests/**/*.py"]
+    question: "Does `patch` add or keep a test whose scenario is a static type error: passing a value of the wrong type (e.g. 123 or None where a mapping/model is declared), omitting a required argument, assigning None to a non-optional field, or instantiating an abstract class?"
+    comment: "This case only re-checks what the type checker already rejects; we don't need to test what tyck can find. Please remove it."
+    support: 14
+    examples:
+      - https://github.com/langgenius/dify/pull/45768#discussion_r4505007988
+      - https://github.com/langgenius/dify/pull/46404#discussion_r4577205798
+      - https://github.com/langgenius/dify/pull/45648#discussion_r4488870073
+      - https://github.com/langgenius/dify/pull/45819#discussion_r4505665941
+      - https://github.com/langgenius/dify/pull/45819#discussion_r4505666389
+      - https://github.com/langgenius/dify/pull/45819#discussion_r4505666598
+      - https://github.com/langgenius/dify/pull/45729#discussion_r4491655409
+      - https://github.com/langgenius/dify/pull/45725#discussion_r4500515284
+      - https://github.com/langgenius/dify/pull/45726#discussion_r4491694394
+      - https://github.com/langgenius/dify/pull/45731#discussion_r4491669682
+      - https://github.com/langgenius/dify/pull/45261#discussion_r4464649445
+      - https://github.com/langgenius/dify/pull/45261#discussion_r4464651182
+      - https://github.com/langgenius/dify/pull/45180#discussion_r4430567006
+      - https://github.com/langgenius/dify/pull/45180#discussion_r4430567856
+  - id: tests-use-sqlite-session
+    kind: grep+jev
+    partly_covered_by: ["dify guard no-new-session-mock (since 2026-09-29): session = MagicMock()/Mock()"]
+    severity: should
+    paths: ["api/tests/**/*.py"]
+    lines: not-removed
+    match: "__table__\\b|metadata\\.create_all\\(|flask_sqlalchemy|SQLAlchemy\\(app\\)|MagicMock\\(spec=Session\\)|session\\s*=\\s*(?:MagicMock|Mock|object)\\(\\)"
+    question: "Does `patch` build its own database setup (create tables, a session maker, a Flask-SQLAlchemy app) or pass a mock/stub/object() in place of a SQLAlchemy Session, instead of using the shared `sqlite_session` fixture?"
+    comment: "Please use the shared `sqlite_session` fixture (and real model rows via `session.add(Model(...))`) instead of a hand-built engine, `__table__` calls or a mocked session."
+    support: 21
+    examples:
+      - https://github.com/langgenius/dify/pull/45876#discussion_r4511092860
+      - https://github.com/langgenius/dify/pull/45331#discussion_r4450195948
+      - https://github.com/langgenius/dify/pull/45633#discussion_r4488875529
+      - https://github.com/langgenius/dify/pull/44888#discussion_r4408644607
+      - https://github.com/langgenius/dify/pull/44888#discussion_r4420305690
+      - https://github.com/langgenius/dify/pull/44888#discussion_r4420307376
+      - https://github.com/langgenius/dify/pull/45698#discussion_r4489290449
+      - https://github.com/langgenius/dify/pull/45146#discussion_r4469875484
+      - https://github.com/langgenius/dify/pull/45142#discussion_r4469880570
+      - https://github.com/langgenius/dify/pull/45458#discussion_r4464586759
+      - https://github.com/langgenius/dify/pull/44881#discussion_r4450627568
+      - https://github.com/langgenius/dify/pull/46291#discussion_r4564662547
+      - https://github.com/langgenius/dify/pull/44875#discussion_r4450633158
+      - https://github.com/langgenius/dify/pull/36191#discussion_r3548937501
+      - https://github.com/langgenius/dify/pull/42335#discussion_r4033575143
+      - https://github.com/langgenius/dify/pull/42248#discussion_r4014857559
+      - https://github.com/langgenius/dify/pull/41007#discussion_r3820932525
+      - https://github.com/langgenius/dify/pull/40797#discussion_r3788799793
+      - https://github.com/langgenius/dify/pull/40797#discussion_r3790746863
+      - https://github.com/langgenius/dify/pull/45696#discussion_r4491633255
+      - https://github.com/langgenius/dify/pull/45766#discussion_r4505010363
+  - id: avoid-cast
+    kind: grep
+    covered_by: ["dify guard no-new-cast (since 2026-10-30)"]
+    severity: should
+    paths: ["api/**/*.py"]
+    lines: added
+    match: "\\bcast\\("
+    comment: "Avoid `cast`: it is not checked at runtime or by the type checker. Give the producer a precise return type, take the value as a typed parameter, or narrow with `isinstance`."
+    support: 11
+    examples:
+      - https://github.com/langgenius/dify/pull/44888#discussion_r4397291611
+      - https://github.com/langgenius/dify/pull/44817#discussion_r4379753985
+      - https://github.com/langgenius/dify/pull/44817#discussion_r4384366472
+      - https://github.com/langgenius/dify/pull/44816#discussion_r4378689031
+      - https://github.com/langgenius/dify/pull/44816#discussion_r4384579941
+      - https://github.com/langgenius/dify/pull/44775#discussion_r4374130007
+      - https://github.com/langgenius/dify/pull/44815#discussion_r4376817976
+      - https://github.com/langgenius/dify/pull/44822#discussion_r4376794921
+      - https://github.com/langgenius/dify/pull/44820#discussion_r4376805128
+      - https://github.com/langgenius/dify/pull/43588#discussion_r4196652178
+      - https://github.com/langgenius/dify/pull/33108#discussion_r2899044985
+  - id: tests-prefer-real-class
+    kind: grep
+    covered_by: ["dify guard no-new-mock (since 2026-10-14)", "dify guard no-new-stub-subclass (since 2026-10-14)"]
+    severity: nit
+    paths: ["api/tests/**/*.py", "api/providers/**/tests/**/*.py"]
+    lines: not-removed
+    match: "\\b(?:MagicMock|Mock|SimpleNamespace|create_autospec)\\(|class _(?:Dummy|Fake|Stub)\\w*"
+    comment: "Can we use the real class here? Mocks and stand-ins make the test check the mock, not the code."
+    support: 9
+    examples:
+      - https://github.com/langgenius/dify/pull/46308#discussion_r4577707282
+      - https://github.com/langgenius/dify/pull/46422#discussion_r4577088037
+      - https://github.com/langgenius/dify/pull/45875#discussion_r4511099640
+      - https://github.com/langgenius/dify/pull/45472#discussion_r4464547086
+      - https://github.com/langgenius/dify/pull/45472#discussion_r4465201021
+      - https://github.com/langgenius/dify/pull/45472#discussion_r4465203178
+      - https://github.com/langgenius/dify/pull/45320#discussion_r4441505447
+      - https://github.com/langgenius/dify/pull/44775#discussion_r4374124655
+      - https://github.com/langgenius/dify/pull/40379#discussion_r3744122730
+  - id: no-reflection
+    kind: grep
+    partly_covered_by: ["dify guard no-new-getattr (since 2026-07-02): getattr()"]
+    propose_guard: true
+    severity: should
+    paths: ["api/**/*.py"]
+    lines: added
+    match: "\\.__dict__\\b|\\bvars\\(|\\bsetattr\\(|def __getattr__\\("
+    comment: "No reflection please (`__dict__`, `vars`, `setattr`, `getattr`, `__getattr__`): construct the object with its fields, or add a typed attribute/method."
+    support: 10
+    examples:
+      - https://github.com/langgenius/dify/pull/45757#discussion_r4521186931
+      - https://github.com/langgenius/dify/pull/45876#discussion_r4511545106
+      - https://github.com/langgenius/dify/pull/45168#discussion_r4471240847
+      - https://github.com/langgenius/dify/pull/45168#discussion_r4471241513
+      - https://github.com/langgenius/dify/pull/45458#discussion_r4464595002
+      - https://github.com/langgenius/dify/pull/45458#discussion_r4464598580
+      - https://github.com/langgenius/dify/pull/45458#discussion_r4464633119
+      - https://github.com/langgenius/dify/pull/44458#discussion_r4332558277
+      - https://github.com/langgenius/dify/pull/42034#discussion_r4001910034
+      - https://github.com/langgenius/dify/pull/40379#discussion_r3744119342
+  - id: inject-session
+    kind: grep
+    propose_guard: true
+    severity: should
+    paths: ["api/controllers/**/*.py", "api/services/**/*.py"]
+    lines: added
+    match: "session\\s+or\\s+db\\.session|session:\\s*[\\w\\[\\]. ]+\\|\\s*None\\s*=\\s*None|db\\.session\\(\\)"
+    comment: "Make `session` a required parameter and inject it (`@with_session` in controllers) instead of an optional argument that falls back to `db.session`."
+    support: 8
+    examples:
+      - https://github.com/langgenius/dify/pull/43112#discussion_r4129096490
+      - https://github.com/langgenius/dify/pull/42034#discussion_r4001911783
+      - https://github.com/langgenius/dify/pull/42034#discussion_r4037113695
+      - https://github.com/langgenius/dify/pull/40379#discussion_r3744084048
+      - https://github.com/langgenius/dify/pull/37639#discussion_r3435610073
+      - https://github.com/langgenius/dify/pull/37639#discussion_r3435610893
+      - https://github.com/langgenius/dify/pull/37639#discussion_r3435612629
+      - https://github.com/langgenius/dify/pull/37639#discussion_r3435613803
+  - id: precise-types
+    kind: grep
+    severity: nit
+    paths: ["api/**/*.py"]
+    lines: added
+    match: "->\\s*(?:object|Any)\\b|:\\s*Any\\b"
+    comment: "Please use the precise type here (e.g. `-> str`, `-> Session`, `Callable[...]`), not `object` / `Any`."
+    support: 7
+    examples:
+      - https://github.com/langgenius/dify/pull/45766#discussion_r4505010078
+      - https://github.com/langgenius/dify/pull/45767#discussion_r4505008980
+      - https://github.com/langgenius/dify/pull/45767#discussion_r4505009279
+      - https://github.com/langgenius/dify/pull/45770#discussion_r4505012869
+      - https://github.com/langgenius/dify/pull/45770#discussion_r4505013226
+      - https://github.com/langgenius/dify/pull/43588#discussion_r4196654446
+      - https://github.com/langgenius/dify/pull/36791#discussion_r3321695422
+  - id: no-patch-module-globals
+    kind: jev
+    severity: should
+    paths: ["api/tests/**/*.py"]
+    question: "Does `patch` monkeypatch or mock.patch a module-level global of production code (such as `db`, `current_user`, `current_account_with_tenant`, or a service method) so the test can run, where the production code could instead receive that dependency as a parameter?"
+    comment: "Instead of patching this in the test, change the production code to take the dependency as a parameter (or drop the global), so no patch is needed."
+    support: 6
+    examples:
+      - https://github.com/langgenius/dify/pull/45146#discussion_r4476516521
+      - https://github.com/langgenius/dify/pull/45142#discussion_r4476533652
+      - https://github.com/langgenius/dify/pull/36842#discussion_r3338212303
+      - https://github.com/langgenius/dify/pull/35203#discussion_r3085575785
+      - https://github.com/langgenius/dify/pull/35203#discussion_r3091576444
+      - https://github.com/langgenius/dify/pull/35203#discussion_r3091576879
+  - id: model-nested-data
+    kind: jev
+    severity: nit
+    paths: ["api/**/*.py"]
+    question: "Does `patch` handle a nested structure as untyped dicts (dict[str, object]/dict[str, Any], chained key lookups, helper functions that index into dicts) where a pydantic model, dataclass or TypedDict would describe the structure?"
+    comment: "Could this be modelled as a pydantic model / dataclass / TypedDict (and validated once with `model_validate`) instead of passing nested dicts around?"
+    support: 4
+    examples:
+      - https://github.com/langgenius/dify/pull/44885#discussion_r4515672207
+      - https://github.com/langgenius/dify/pull/37660#discussion_r3441137059
+      - https://github.com/langgenius/dify/pull/35248#discussion_r3087743748
+      - https://github.com/langgenius/dify/pull/35248#discussion_r3087747017
+  - id: no-bypass-init
+    kind: grep
+    covered_by: ["dify guard no-new-constructor-bypass (since 2026-10-30)"]
+    severity: nit
+    paths: ["api/**/*.py"]
+    lines: added
+    match: "\\.__new__\\("
+    comment: "Please construct it through `__init__` rather than bypassing it with `__new__`."
+    support: 2
+    examples:
+      - https://github.com/langgenius/dify/pull/44837#discussion_r4424553072
+      - https://github.com/langgenius/dify/pull/44775#discussion_r4374124655
+  - id: unrelated-change
+    kind: jev
+    severity: should
+    paths: ["**"]
+    question: "Given the pull request title in `title`, is `patch` an unrelated change: a version bump, lockfile churn, corrupted or re-encoded text, or a stray file the title does not call for?"
+    comment: "This change looks unrelated to the PR; please leave it out."
+    support: 6
+    examples:
+      - https://github.com/langgenius/dify/pull/43112#discussion_r4536639533
+      - https://github.com/langgenius/dify/pull/43112#discussion_r4536640405
+      - https://github.com/langgenius/dify/pull/44898#discussion_r4389359422
+      - https://github.com/langgenius/dify/pull/38280#discussion_r3510172787
+      - https://github.com/langgenius/dify/pull/37950#discussion_r3476439980
+      - https://github.com/langgenius/dify/pull/35804#discussion_r3193231742
+
+# Better enforced by a linter than by review; propose these to the api/ ruff config.
+linter_candidates:
+  - check: "ruff ANN001/ANN201 for api/tests"
+    why: "Type annotations on test parameters and fixtures (`monkeypatch: pytest.MonkeyPatch`, `caplog: pytest.LogCaptureFixture`, `-> None`)."
+    support: 6
+    examples:
+      - https://github.com/langgenius/dify/pull/41077#discussion_r3840518120
+      - https://github.com/langgenius/dify/pull/41077#discussion_r3840519868
+      - https://github.com/langgenius/dify/pull/37473#discussion_r3417660556
+      - https://github.com/langgenius/dify/pull/36969#discussion_r3346191806
+      - https://github.com/langgenius/dify/pull/36738#discussion_r3314679279
+      - https://github.com/langgenius/dify/pull/36738#discussion_r3314680776
+  - check: "ruff SIM117"
+    why: "Merge nested `with` statements: `with a as b, c as d:`."
+    support: 4
+    examples:
+      - https://github.com/langgenius/dify/pull/37621#discussion_r3434289234
+      - https://github.com/langgenius/dify/pull/37621#discussion_r3434290936
+      - https://github.com/langgenius/dify/pull/37621#discussion_r3434292390
+      - https://github.com/langgenius/dify/pull/37621#discussion_r3436043414
+  - check: "ruff UP037 / prefer Self"
+    why: "No quoted annotations; use `Self` / a lambda for SQLAlchemy relationships."
+    support: 2
+    examples:
+      - https://github.com/langgenius/dify/pull/45168#discussion_r4476556666
+      - https://github.com/langgenius/dify/pull/44821#discussion_r4376798363
+  - check: "ruff PLC2701 (import-private-name)"
+    why: "No imports from private modules such as `httpx._models`."
+    support: 1
+    examples:
+      - https://github.com/langgenius/dify/pull/45726#discussion_r4500483284
