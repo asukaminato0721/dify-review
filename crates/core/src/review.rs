@@ -197,24 +197,41 @@ pub fn summary_marker(head: &str, trigger: Option<u64>) -> String {
 /// Footer every review summary ends its text with.
 const SUMMARY_FOOTER: &str = "\n\n<sub>dify-codereview</sub>\n";
 
-/// A review summary: what was found at which head (linked to the commit in
-/// the pull request), who asked, and the marker recording the head and
-/// the asking comment.
-pub fn summary_body(
-    repo: &Repo,
-    pr: u64,
-    head: &str,
-    n: usize,
-    requester: Option<&str>,
-    trigger: Option<u64>,
-) -> String {
-    let who = requester
+/// What a review summary reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SummaryFacts<'a> {
+    pub head: &'a str,
+    /// Inline comments posted with this review.
+    pub new: usize,
+    /// Earlier suggestions whose lines are unchanged and still unresolved.
+    pub still_open: usize,
+    /// Base branch the head conflicts with.
+    pub conflict_base: Option<&'a str>,
+    pub requester: Option<&'a str>,
+    pub trigger: Option<u64>,
+}
+
+/// A review summary: conflict, what was found at which head (linked to the
+/// commit in the pull request), what is still open, who asked, and the
+/// marker recording the head, the asking comment and a flagged conflict.
+pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
+    let who = f
+        .requester
         .map(|r| format!("Requested by @{r}. "))
         .unwrap_or_default();
-    let short = &head[..head.len().min(10)];
-    let at = format!("[`{short}`](https://github.com/{repo}/pull/{pr}/commits/{head})");
-    let what = match n {
-        0 => format!("Nothing to flag at {at}."),
+    let short = &f.head[..f.head.len().min(10)];
+    let at = format!(
+        "[`{short}`](https://github.com/{repo}/pull/{pr}/commits/{})",
+        f.head
+    );
+    let conflict = f
+        .conflict_base
+        .map(|b| {
+            format!("This branch has conflicts with `{b}`: please rebase onto the latest `{b}`. ")
+        })
+        .unwrap_or_default();
+    let found = match f.new {
+        0 => String::new(),
         1 => format!(
             "1 inline suggestion at {at}, from a rule learned from earlier reviews in this repository. Reply on the comment if it is wrong."
         ),
@@ -222,10 +239,26 @@ pub fn summary_body(
             "{n} inline suggestions at {at}, each from a rule learned from earlier reviews in this repository. Reply on a comment if it is wrong."
         ),
     };
-    format!(
-        "{who}{what}{SUMMARY_FOOTER}{}",
-        summary_marker(head, trigger)
-    )
+    let open = match f.still_open {
+        0 => String::new(),
+        1 => "1 earlier suggestion is still open.".to_owned(),
+        n => format!("{n} earlier suggestions are still open."),
+    };
+    let what = match (f.new, f.still_open, conflict.is_empty()) {
+        (0, 0, true) => format!("Nothing to flag at {at}."),
+        (0, _, _) => format!("Checked {at}. {open}"),
+        _ => [found, open]
+            .iter()
+            .filter(|p| !p.is_empty())
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(" "),
+    };
+    let mut marker = summary_marker(f.head, f.trigger);
+    if f.conflict_base.is_some() {
+        marker = marker.replacen(" -->", &format!(";conflict={} -->", f.head), 1);
+    }
+    format!("{who}{conflict}{}{SUMMARY_FOOTER}{marker}", what.trim_end())
 }
 
 /// A summary posted in an earlier format, rewritten as `summary_body` would
@@ -240,17 +273,28 @@ pub fn refreshed_summary(body: &str, repo: &Repo, pr: u64) -> Option<String> {
     let requester = text
         .strip_prefix("Requested by @")
         .and_then(|r| r.split(". ").next());
-    let n = match text.contains("Nothing to flag") {
-        true => 0,
-        false => text
-            .split(" inline suggestion")
-            .next()?
+    let count_before = |marker: &str| -> Option<usize> {
+        text.split(marker)
+            .next()
+            .filter(|before| before.len() < text.len())?
             .rsplit(' ')
             .next()?
             .parse()
-            .ok()?,
+            .ok()
     };
-    let fresh = summary_body(repo, pr, &head, n, requester, trigger);
+    let conflict_base = text
+        .split("conflicts with `")
+        .nth(1)
+        .and_then(|r| r.split('`').next());
+    let facts = SummaryFacts {
+        head: &head,
+        new: count_before(" inline suggestion").unwrap_or(0),
+        still_open: count_before(" earlier suggestion").unwrap_or(0),
+        conflict_base,
+        requester,
+        trigger,
+    };
+    let fresh = summary_body(repo, pr, &facts);
     (fresh != body).then_some(fresh)
 }
 
@@ -412,7 +456,15 @@ mod tests {
     fn summary_links_the_commit_and_refreshes_old_ones() {
         let repo: Repo = "o/r".parse().unwrap();
         let head = "d689cee60fabcdef";
-        let one = summary_body(&repo, 7, head, 1, None, None);
+        let facts = |new, still_open, conflict_base, requester, trigger| SummaryFacts {
+            head,
+            new,
+            still_open,
+            conflict_base,
+            requester,
+            trigger,
+        };
+        let one = summary_body(&repo, 7, &facts(1, 0, None, None, None));
         assert!(one.starts_with("1 inline suggestion at [`d689cee60f`](https://github.com/o/r/pull/7/commits/d689cee60fabcdef), from"));
         assert_eq!(refreshed_summary(&one, &repo, 7), None);
         let old = format!(
@@ -421,7 +473,7 @@ mod tests {
         );
         assert_eq!(
             refreshed_summary(&old, &repo, 7).unwrap(),
-            summary_body(&repo, 7, head, 3, Some("me"), Some(9))
+            summary_body(&repo, 7, &facts(3, 0, None, Some("me"), Some(9)))
         );
         let nothing = format!(
             "Nothing to flag at `d689cee60f`.\n\n<sub>dify-codereview</sub>\n{}",
@@ -429,9 +481,21 @@ mod tests {
         );
         assert_eq!(
             refreshed_summary(&nothing, &repo, 7).unwrap(),
-            summary_body(&repo, 7, head, 0, None, None)
+            summary_body(&repo, 7, &facts(0, 0, None, None, None))
         );
         assert_eq!(refreshed_summary("a human review", &repo, 7), None);
+
+        let conflicted = summary_body(&repo, 7, &facts(2, 1, Some("main"), None, None));
+        assert!(conflicted.starts_with("This branch has conflicts with `main`: please rebase onto the latest `main`. 2 inline suggestions"));
+        assert!(conflicted.contains("1 earlier suggestion is still open."));
+        assert_eq!(
+            marker_values(&conflicted, "conflict"),
+            vec![head.to_owned()]
+        );
+        assert_eq!(refreshed_summary(&conflicted, &repo, 7), None);
+        let only_open = summary_body(&repo, 7, &facts(0, 2, None, None, None));
+        assert!(only_open.starts_with("Checked [`d689cee60f`]"));
+        assert_eq!(refreshed_summary(&only_open, &repo, 7), None);
     }
 
     #[test]

@@ -9,11 +9,11 @@ use anyhow::Result;
 use dify_review_core::Repo;
 use dify_review_core::diff::Hunk;
 use dify_review_core::review::{
-    Finding, Verdict, decide_at, decide_by_hint, posting_threshold, summary_body,
+    Finding, SummaryFacts, Verdict, decide_at, decide_by_hint, posting_threshold, summary_body,
 };
 use dify_review_core::rules::{Rule, RuleId, RuleSet};
 use dify_review_github::GitHub;
-use dify_review_github::pr::{self, InlineComment, PullRequest};
+use dify_review_github::pr::{self, InlineComment, PullRequest, ReviewEvent};
 use dify_review_jev::{Jev, MAX_PATCH_CHARS, Usage, hunk_state};
 use futures::stream::{self, StreamExt};
 
@@ -109,6 +109,7 @@ impl Reviewer {
         let history = pr::history(&self.gh, &self.repo, number).await?;
         let seen = history.heads.contains(&pr.head.0);
         let asked = force || ask.is_some();
+        let conflict_flagged = history.conflicts.contains(&pr.head.0);
         match (seen, asked) {
             _ if !pr.open => {
                 eprintln!("PR #{number}: not open, skipped");
@@ -117,6 +118,24 @@ impl Reviewer {
             _ if pr.draft && !asked => {
                 eprintln!("PR #{number}: draft, skipped until ready for review");
                 Ok(())
+            }
+            // The head was reviewed, but the base moved on and it now conflicts.
+            (true, false) if pr.conflicted() && !conflict_flagged => {
+                eprintln!(
+                    "PR #{number}: head {} now conflicts with {}",
+                    short(&pr.head.0),
+                    pr.base_ref
+                );
+                let facts = SummaryFacts {
+                    head: &pr.head.0,
+                    new: 0,
+                    still_open: 0,
+                    conflict_base: Some(&pr.base_ref),
+                    requester: None,
+                    trigger: None,
+                };
+                self.post(&pr, &facts, &[], ReviewEvent::RequestChanges)
+                    .await
             }
             (true, false) => {
                 eprintln!(
@@ -129,10 +148,48 @@ impl Reviewer {
         }
     }
 
+    /// Review a head: resolve the bot's comments the push made outdated,
+    /// judge the hunks, and post one review. It requests changes when there
+    /// is a new suggestion, an earlier one still open, or a merge conflict;
+    /// otherwise it says nothing is left and dismisses the bot's earlier
+    /// change requests.
     async fn judge_and_post(&self, pr: &PullRequest, ask: Option<Ask<'_>>) -> Result<()> {
+        let threads = pr::bot_threads(&self.gh, &self.repo, pr.number).await?;
+        let outdated: Vec<_> = threads
+            .iter()
+            .filter(|t| t.outdated && !t.resolved)
+            .collect();
+        if self.opts.post {
+            for t in &outdated {
+                pr::resolve_thread(&self.gh, &t.id).await?;
+            }
+        }
+        if !outdated.is_empty() {
+            eprintln!(
+                "PR #{}: {} earlier comment(s) outdated by the push {}",
+                pr.number,
+                outdated.len(),
+                if self.opts.post {
+                    "resolved"
+                } else {
+                    "would be resolved"
+                }
+            );
+        }
+        // Dedupe only against comments still standing on current lines: a
+        // problem that survived a push under an outdated comment is raised again.
+        let posted: HashSet<String> = threads
+            .iter()
+            .filter(|t| !t.outdated)
+            .filter_map(|t| t.key.clone())
+            .collect();
+        let still_open = threads
+            .iter()
+            .filter(|t| !t.outdated && !t.resolved)
+            .count();
+
         let files = pr::changed_files(&self.gh, &self.repo, pr.number).await?;
         tracing::info!(pr = pr.number, title = %pr.title, files = files.len(), "reviewing");
-
         let jobs: Vec<(&str, &Hunk, Vec<&Rule>)> = files
             .iter()
             .flat_map(|file| {
@@ -171,33 +228,64 @@ impl Reviewer {
                 (all, total, n + a)
             },
         );
-
-        let posted = pr::posted_keys(&self.gh, &self.repo, pr.number).await?;
         let selected = select(findings, &posted, self.opts.max_comments);
         report(pr, &selected, &posted, asked, usage);
 
-        // An explicit ask always gets an answer, even "nothing to flag".
-        match (self.opts.post, selected.is_empty() && ask.is_none()) {
-            (false, _) => {
-                eprintln!("\ndry run: nothing posted (add --post to post)");
+        let conflict = pr.conflicted();
+        let facts = SummaryFacts {
+            head: &pr.head.0,
+            new: selected.len(),
+            still_open,
+            conflict_base: conflict.then_some(pr.base_ref.as_str()),
+            requester: ask.as_ref().map(|a| a.author),
+            trigger: ask.as_ref().map(|a| a.comment_id),
+        };
+        let event = match facts.new > 0 || still_open > 0 || conflict {
+            true => ReviewEvent::RequestChanges,
+            false => ReviewEvent::Comment,
+        };
+        let comments: Vec<_> = selected
+            .iter()
+            .map(|f| InlineComment {
+                path: f.path.clone(),
+                line: f.line,
+                body: f.body(),
+            })
+            .collect();
+        self.post(pr, &facts, &comments, event).await?;
+        if self.opts.post && event == ReviewEvent::Comment {
+            let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
+            match pr::dismiss_bot_change_requests(&self.gh, &self.repo, pr.number, &msg).await {
+                Ok(0) => {}
+                Ok(n) => eprintln!("dismissed {n} earlier change request(s)"),
+                Err(e) => {
+                    tracing::warn!(pr = pr.number, error = %e, "could not dismiss earlier change requests")
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn post(
+        &self,
+        pr: &PullRequest,
+        facts: &SummaryFacts<'_>,
+        comments: &[InlineComment],
+        event: ReviewEvent,
+    ) -> Result<()> {
+        let body = summary_body(&self.repo, pr.number, facts);
+        match self.opts.post {
+            false => {
+                eprintln!(
+                    "\ndry run: would post a {event:?} review: {}",
+                    body.lines().next().unwrap_or_default()
+                );
                 Ok(())
             }
-            (true, true) => {
-                eprintln!("\nnothing new to post");
-                Ok(())
-            }
-            (true, false) => {
-                let comments: Vec<_> = selected
-                    .iter()
-                    .map(|f| InlineComment {
-                        path: f.path.clone(),
-                        line: f.line,
-                        body: f.body(),
-                    })
-                    .collect();
-                let summary = summary(&self.repo, pr, comments.len(), ask.as_ref());
-                let review = pr::post_review(&self.gh, &self.repo, pr, &summary, &comments).await?;
-                eprintln!("\nposted: {}", review.html_url);
+            true => {
+                let review =
+                    pr::post_review(&self.gh, &self.repo, pr, &body, comments, event).await?;
+                eprintln!("\nposted ({event:?}): {}", review.html_url);
                 Ok(())
             }
         }
@@ -206,17 +294,6 @@ impl Reviewer {
 
 fn short(sha: &str) -> &str {
     &sha[..sha.len().min(10)]
-}
-
-fn summary(repo: &Repo, pr: &PullRequest, n: usize, ask: Option<&Ask<'_>>) -> String {
-    summary_body(
-        repo,
-        pr.number,
-        &pr.head.0,
-        n,
-        ask.map(|a| a.author),
-        ask.map(|a| a.comment_id),
-    )
 }
 
 /// One Jev request per hunk carrying every applicable rule; hints without

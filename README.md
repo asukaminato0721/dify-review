@@ -104,9 +104,17 @@ cargo run --release -- watch --assignee asukaminato0721 --since 2h --post   # po
 One pass over the pull requests the bot should look at; run it on a
 schedule, with `--since` a little longer than the interval:
 
-- open pull requests assigned to `--assignee` and updated since `--since`.
+- open pull requests assigned to `--assignee` and updated since `--since`
+  (`--all-assigned`: every one, for a cold start or a sweep for conflicts).
   Each head is reviewed once (the review summary records it), so a new push
   gets a new review and an unchanged head is left alone; drafts wait.
+  Before reviewing a new head, the bot resolves its comments the push made
+  outdated. The review requests changes when there is a new suggestion, an
+  earlier one still open, or a merge conflict (it asks for a rebase);
+  otherwise it says nothing is left to flag and dismisses its earlier change
+  requests. A conflict that appears later on a reviewed head is flagged too.
+  On the author's own pull request GitHub allows no change request, so it
+  comments instead.
 - pull requests where an OWNER, MEMBER or COLLABORATOR mentions
   `@dify-codereview` (the handle follows Meta's `meta-codesync`): each
   mention is answered once, even on a head already reviewed, and always gets

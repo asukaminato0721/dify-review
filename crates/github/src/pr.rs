@@ -26,8 +26,19 @@ pub struct PullRequest {
     pub head: CommitSha,
     /// The branch it merges into, e.g. `main`.
     pub base_ref: String,
+    pub author: String,
     pub open: bool,
     pub draft: bool,
+    /// GitHub's `mergeable_state`; "dirty" means a merge conflict. Unknown
+    /// (None) while GitHub is still computing it.
+    pub mergeable_state: Option<String>,
+}
+
+impl PullRequest {
+    /// The branch conflicts with its base and needs a rebase.
+    pub fn conflicted(&self) -> bool {
+        self.mergeable_state.as_deref() == Some("dirty")
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +56,9 @@ struct RawPr {
     draft: bool,
     head: RawHead,
     base: RawBase,
+    user: RawUser,
+    #[serde(default)]
+    mergeable_state: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -79,8 +93,10 @@ pub async fn pull_request(gh: &GitHub, repo: &Repo, number: u64) -> Result<PullR
         title: pr.title,
         head: pr.head.sha,
         base_ref: pr.base.branch,
+        author: pr.user.login,
         open: pr.state == "open",
         draft: pr.draft,
+        mergeable_state: pr.mergeable_state,
     })
 }
 
@@ -165,22 +181,48 @@ pub struct PostedReview {
 }
 
 /// One review with event COMMENT: never approves, never requests changes.
+/// How a review lands: a plain comment, or a request for changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReviewEvent {
+    Comment,
+    RequestChanges,
+}
+
+impl ReviewEvent {
+    fn api(self) -> &'static str {
+        match self {
+            Self::Comment => "COMMENT",
+            Self::RequestChanges => "REQUEST_CHANGES",
+        }
+    }
+}
+
+/// One review. GitHub refuses REQUEST_CHANGES on the reviewer's own pull
+/// request; then it is posted as a plain comment instead.
 pub async fn post_review(
     gh: &GitHub,
     repo: &Repo,
     pr: &PullRequest,
     summary: &str,
     comments: &[InlineComment],
+    event: ReviewEvent,
 ) -> Result<PostedReview> {
     let comments: Vec<_> = comments
         .iter()
         .map(|c| json!({ "path": c.path, "line": c.line, "side": "RIGHT", "body": c.body }))
         .collect();
-    gh.post(
-        &format!("/repos/{repo}/pulls/{}/reviews", pr.number),
-        &json!({ "commit_id": pr.head, "event": "COMMENT", "body": summary, "comments": comments }),
-    )
-    .await
+    let path = format!("/repos/{repo}/pulls/{}/reviews", pr.number);
+    let body = |event: ReviewEvent| json!({ "commit_id": pr.head, "event": event.api(), "body": summary, "comments": comments });
+    match gh.post(&path, &body(event)).await {
+        Err(e)
+            if event == ReviewEvent::RequestChanges
+                && e.to_string().contains("your own pull request") =>
+        {
+            tracing::info!(pr = pr.number, "own pull request: posting as a comment");
+            gh.post(&path, &body(ReviewEvent::Comment)).await
+        }
+        other => other,
+    }
 }
 
 #[derive(Deserialize)]
@@ -195,6 +237,8 @@ struct RawReview {
 pub struct History {
     pub heads: HashSet<String>,
     pub triggers: HashSet<u64>,
+    /// Heads whose merge conflict was already pointed out.
+    pub conflicts: HashSet<String>,
 }
 
 pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
@@ -211,6 +255,10 @@ pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
             .iter()
             .flat_map(|b| marker_values(b, "trigger"))
             .filter_map(|t| t.parse().ok())
+            .collect(),
+        conflicts: bodies
+            .iter()
+            .flat_map(|b| marker_values(b, "conflict"))
             .collect(),
     })
 }
@@ -350,15 +398,18 @@ struct RawIssue {
 }
 
 /// Open pull requests assigned to `login` and updated since `since`.
+/// Open pull requests assigned to `login`: updated since `since`, or all
+/// of them when `since` is None.
 pub async fn assigned_open(
     gh: &GitHub,
     repo: &Repo,
     login: &str,
-    since: Timestamp,
+    since: Option<Timestamp>,
 ) -> Result<Vec<u64>> {
+    let window = since.map(|s| format!("&since={s}")).unwrap_or_default();
     let issues: Vec<RawIssue> = gh
         .get_all(&format!(
-            "/repos/{repo}/issues?assignee={login}&state=open&since={since}"
+            "/repos/{repo}/issues?assignee={login}&state=open{window}"
         ))
         .await?;
     Ok(issues
@@ -429,6 +480,7 @@ pub struct ReviewSummary {
     #[serde(default)]
     pub body: Option<String>,
     pub html_url: String,
+    pub state: String,
 }
 
 pub async fn reviews(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<ReviewSummary>> {
@@ -445,4 +497,163 @@ pub async fn edit_review(gh: &GitHub, repo: &Repo, number: u64, id: u64, body: &
         )
         .await?;
     Ok(())
+}
+
+/// A review thread a dify-review comment started.
+#[derive(Debug, Clone)]
+pub struct BotThread {
+    /// GraphQL node id, for resolving it.
+    pub id: String,
+    pub resolved: bool,
+    /// The commented lines changed after the comment.
+    pub outdated: bool,
+    /// The dedupe key in the comment's marker.
+    pub key: Option<String>,
+}
+
+const THREADS_QUERY: &str = r#"
+query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  rateLimit { cost remaining resetAt }
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes { id isResolved isOutdated comments(first: 1) { nodes { body } } }
+      }
+    }
+  }
+}
+"#;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadsData {
+    rate_limit: Option<crate::client::RateLimit>,
+    repository: Option<ThreadsRepo>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadsRepo {
+    pull_request: Option<ThreadsPr>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadsPr {
+    review_threads: ThreadsConn,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadsConn {
+    page_info: ThreadsPage,
+    nodes: Vec<ThreadNode>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadsPage {
+    has_next_page: bool,
+    end_cursor: Option<String>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ThreadNode {
+    id: String,
+    is_resolved: bool,
+    is_outdated: bool,
+    comments: ThreadComments,
+}
+#[derive(Deserialize)]
+struct ThreadComments {
+    nodes: Vec<ThreadComment>,
+}
+#[derive(Deserialize)]
+struct ThreadComment {
+    body: String,
+}
+
+impl crate::client::HasRateLimit for ThreadsData {
+    fn rate_limit(&self) -> Option<&crate::client::RateLimit> {
+        self.rate_limit.as_ref()
+    }
+}
+
+/// Every review thread on the pull request that a dify-review comment started.
+pub async fn bot_threads(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<BotThread>> {
+    let mut found = Vec::new();
+    let mut after: Option<String> = None;
+    let mut more = true;
+    while more {
+        let d: ThreadsData = gh
+            .query(
+                THREADS_QUERY,
+                json!({ "owner": repo.owner(), "name": repo.name(), "number": number, "after": after }),
+            )
+            .await?;
+        let conn = d
+            .repository
+            .and_then(|r| r.pull_request)
+            .with_context(|| format!("pull request {number} not found"))?
+            .review_threads;
+        found.extend(conn.nodes.into_iter().filter_map(|t| {
+            let body = &t.comments.nodes.first()?.body;
+            marker_values(body, "rule").first()?;
+            Some(BotThread {
+                id: t.id,
+                resolved: t.is_resolved,
+                outdated: t.is_outdated,
+                key: marker_values(body, "key").into_iter().next(),
+            })
+        }));
+        more = conn.page_info.has_next_page;
+        after = conn.page_info.end_cursor;
+    }
+    Ok(found)
+}
+
+#[derive(Deserialize)]
+struct Resolved {}
+
+impl crate::client::HasRateLimit for Resolved {
+    fn rate_limit(&self) -> Option<&crate::client::RateLimit> {
+        None
+    }
+}
+
+/// Mark a review thread resolved.
+pub async fn resolve_thread(gh: &GitHub, thread_id: &str) -> Result<()> {
+    let _: Resolved = gh
+        .query(
+            "mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { id } } }",
+            json!({ "id": thread_id }),
+        )
+        .await?;
+    Ok(())
+}
+
+/// Dismiss dify-review's own earlier change requests on the pull request,
+/// once nothing is left to change.
+pub async fn dismiss_bot_change_requests(
+    gh: &GitHub,
+    repo: &Repo,
+    number: u64,
+    message: &str,
+) -> Result<usize> {
+    let open: Vec<ReviewSummary> = reviews(gh, repo, number)
+        .await?
+        .into_iter()
+        .filter(|r| r.state == "CHANGES_REQUESTED")
+        .filter(|r| {
+            r.body
+                .as_deref()
+                .is_some_and(|b| !marker_values(b, "head").is_empty())
+        })
+        .collect();
+    for r in &open {
+        let _: serde_json::Value = gh
+            .put(
+                &format!("/repos/{repo}/pulls/{number}/reviews/{}/dismissals", r.id),
+                &json!({ "message": message, "event": "DISMISS" }),
+            )
+            .await?;
+    }
+    Ok(open.len())
 }
