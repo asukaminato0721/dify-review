@@ -1,0 +1,68 @@
+# Weekly: add new review history, judge the bot's own comments, backtest
+# and recalibrate thresholds, then open a pull request with what changed in
+# rules/ and backtest/. data/ (collected threads and caches) lives in the
+# `data` release, not in git.
+name: calibrate
+on:
+  schedule: [{cron: "0 0 * * 1"}]   # Monday 09:00 JST
+  workflow_dispatch:
+permissions: {contents: write, pull-requests: write}
+concurrency: {group: calibrate, cancel-in-progress: false}
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download the rolling binary and the data
+        run: |
+          gh release download rolling -p 'dify-review-x86_64-linux*'
+          sha256sum -c dify-review-x86_64-linux.sha256
+          chmod +x dify-review-x86_64-linux
+          gh release download data -p data.tar.gz
+          tar xzf data.tar.gz
+      - id: app
+        if: vars.APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: langgenius
+          repositories: dify
+      - name: Collect, judge feedback, backtest
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token || secrets.DIFY_REVIEW_TOKEN }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          JEV_BASE_URL: ${{ vars.JEV_BASE_URL }}
+        run: |
+          bin=./dify-review-x86_64-linux
+          $bin collect --since 14d --append
+          $bin feedback --since 30d > feedback.txt
+          $bin backtest --apply > backtest.txt 2> apply.txt
+      - name: Save the data
+        run: |
+          tar czf data.tar.gz data
+          gh release upload data data.tar.gz --clobber
+      - name: Open a pull request
+        run: |
+          if git diff --quiet -- rules backtest; then
+            echo "nothing changed"
+            exit 0
+          fi
+          branch="calibrate/$(date -u +%Y-%m-%d)"
+          git switch -c "$branch"
+          git add rules backtest
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "Weekly calibration $(date -u +%Y-%m-%d)"
+          git push -f origin "$branch"
+          {
+            echo "Weekly feedback and recalibration. Review the threshold changes and the report, then merge."
+            echo
+            echo '### Live comments'
+            echo '```'; cat feedback.txt; echo '```'
+            echo '### Backtest'
+            echo '```'; cat backtest.txt; grep -E 'threshold ->|precision; rewrite' apply.txt || true; echo '```'
+          } > body.md
+          gh pr create --head "$branch" --title "Weekly calibration $(date -u +%Y-%m-%d)" --body-file body.md

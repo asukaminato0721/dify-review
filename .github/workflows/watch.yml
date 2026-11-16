@@ -1,0 +1,36 @@
+# Every 15 minutes: review open dify pull requests assigned to vars.ASSIGNEE
+# and answer @dify-codereview mentions, with the binary from the rolling
+# release. Posts as the dify-codereview App when vars.APP_ID is set, else
+# with secrets.DIFY_REVIEW_TOKEN.
+name: watch
+on:
+  schedule: [{cron: "*/15 * * * *"}]
+  workflow_dispatch:
+permissions: {contents: read}
+concurrency: {group: watch, cancel-in-progress: false}
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download the rolling binary
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          gh release download rolling -p 'dify-review-x86_64-linux*'
+          sha256sum -c dify-review-x86_64-linux.sha256
+          chmod +x dify-review-x86_64-linux
+      - id: app
+        if: vars.APP_ID != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: langgenius
+          repositories: dify
+      - name: Watch
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token || secrets.DIFY_REVIEW_TOKEN }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          JEV_BASE_URL: ${{ vars.JEV_BASE_URL }}
+        run: ./dify-review-x86_64-linux watch --assignee "${{ vars.ASSIGNEE }}" --since 1h --post
