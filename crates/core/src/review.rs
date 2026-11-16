@@ -1,20 +1,14 @@
 //! From a rule and a hunk to an inline comment: decide from Jev's answer
 //! (or the hint alone), anchor on a line, render with a dedupe marker.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::MARKER;
 use crate::diff::{Hunk, NewLine};
 use crate::rules::{Judge, OptionName, Rule, RuleId, Severity};
 
-/// A noul answer at or above this probability comments.
-pub const NOUL_THRESHOLD: f64 = 0.7;
-/// A choice answer comments when its top option has a comment and Jev's
-/// confidence is at least this.
-pub const CHOICE_MIN_CONFIDENCE: f64 = 0.6;
-
 /// Jev's answer to one rule's question.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Answer {
     Noul(f64),
     Choice { choice: OptionName, confidence: f64 },
@@ -29,11 +23,23 @@ pub struct Verdict {
     pub comment: String,
 }
 
-/// Decide from Jev's answer. An answer of the wrong shape for the rule is
-/// ignored (no comment) rather than guessed at.
-pub fn decide(rule: &Rule, answer: &Answer) -> Option<Verdict> {
+/// Decide about a hunk from Jev's answer at the rule's own threshold.
+pub fn decide(rule: &Rule, hunk: &Hunk, answer: &Answer) -> Option<Verdict> {
+    decide_at(rule, hunk, answer, rule.threshold)
+}
+
+/// A gated rule only speaks where its hint matches an added line.
+pub fn passes_gate(rule: &Rule, hunk: &Hunk) -> bool {
+    !rule.gate || hint_match(rule, hunk).is_some()
+}
+
+/// Decide at a given threshold: the probability of yes (noul) or the
+/// confidence in a commenting option (choice). An answer of the wrong shape
+/// for the rule is ignored (no comment) rather than guessed at.
+pub fn decide_at(rule: &Rule, hunk: &Hunk, answer: &Answer, threshold: f64) -> Option<Verdict> {
     match (&rule.judge, answer) {
-        (Judge::Noul { comment, .. }, Answer::Noul(p)) => (*p >= NOUL_THRESHOLD).then(|| Verdict {
+        _ if !passes_gate(rule, hunk) => None,
+        (Judge::Noul { comment, .. }, Answer::Noul(p)) => (*p >= threshold).then(|| Verdict {
             option: None,
             score: *p,
             comment: comment.clone(),
@@ -42,7 +48,7 @@ pub fn decide(rule: &Rule, answer: &Answer) -> Option<Verdict> {
             .iter()
             .find(|o| &o.name == choice)
             .and_then(|o| o.comment.clone())
-            .filter(|_| *confidence >= CHOICE_MIN_CONFIDENCE)
+            .filter(|_| *confidence >= threshold)
             .map(|comment| Verdict {
                 option: Some(choice.clone()),
                 score: *confidence,
@@ -151,7 +157,8 @@ pub fn marker_keys(body: &str) -> Vec<String> {
         .collect()
 }
 
-fn fnv1a(bytes: &[u8]) -> u64 {
+/// FNV-1a: a small hash that is stable across Rust versions and platforms.
+pub fn fnv1a(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| {
         (h ^ u64::from(*b)).wrapping_mul(0x0000_0100_0000_01b3)
     })
@@ -177,29 +184,29 @@ mod tests {
 
     #[test]
     fn noul_threshold_and_shape() {
-        let (rules, _) = setup();
-        assert!(decide(&rules[0], &Answer::Noul(0.92)).is_some());
-        assert!(decide(&rules[0], &Answer::Noul(0.5)).is_none());
+        let (rules, hunk) = setup();
+        assert!(decide(&rules[0], &hunk, &Answer::Noul(0.92)).is_some());
+        assert!(decide(&rules[0], &hunk, &Answer::Noul(0.5)).is_none());
         let wrong = Answer::Choice {
             choice: OptionName("real".into()),
             confidence: 0.99,
         };
-        assert!(decide(&rules[0], &wrong).is_none());
+        assert!(decide(&rules[0], &hunk, &wrong).is_none());
     }
 
     #[test]
     fn choice_comments_only_for_commenting_options() {
-        let (rules, _) = setup();
+        let (rules, hunk) = setup();
         let pick = |name: &str, c| Answer::Choice {
             choice: OptionName(name.into()),
             confidence: c,
         };
-        let v = decide(&rules[1], &pick("real", 0.9)).unwrap();
+        let v = decide(&rules[1], &hunk, &pick("real", 0.9)).unwrap();
         assert_eq!(v.option, Some(OptionName("real".into())));
         assert_eq!(v.comment, "Use the real class.");
-        assert!(decide(&rules[1], &pick("none", 0.99)).is_none());
-        assert!(decide(&rules[1], &pick("real", 0.3)).is_none());
-        assert!(decide(&rules[1], &pick("unknown", 0.99)).is_none());
+        assert!(decide(&rules[1], &hunk, &pick("none", 0.99)).is_none());
+        assert!(decide(&rules[1], &hunk, &pick("real", 0.3)).is_none());
+        assert!(decide(&rules[1], &hunk, &pick("unknown", 0.99)).is_none());
     }
 
     #[test]
@@ -214,7 +221,7 @@ mod tests {
     #[test]
     fn body_round_trips_its_key() {
         let (rules, hunk) = setup();
-        let v = decide(&rules[0], &Answer::Noul(0.9)).unwrap();
+        let v = decide(&rules[0], &hunk, &Answer::Noul(0.9)).unwrap();
         let f = Finding::new(&rules[0], "api/x.py", &hunk, v).unwrap();
         let body = f.body();
         assert!(body.starts_with("Fix the type."));

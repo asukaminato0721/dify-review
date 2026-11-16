@@ -18,7 +18,7 @@ pub struct RuleId(pub String);
 
 impl fmt::Display for RuleId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.pad(&self.0)
     }
 }
 
@@ -60,14 +60,24 @@ pub enum Judge {
     },
 }
 
+/// Default bar for a noul rule: probability of yes.
+pub const NOUL_THRESHOLD: f64 = 0.7;
+/// Default bar for a choice rule: confidence in a commenting option.
+pub const CHOICE_THRESHOLD: f64 = 0.6;
+
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub id: RuleId,
     pub severity: Severity,
+    /// The bar Jev's score must reach; from the file, else the judge's default.
+    pub threshold: f64,
     paths: GlobSet,
     /// Places the comment on the first matching added line; judges alone
     /// when no Jev key is configured.
     pub hint: Option<Regex>,
+    /// Comment only where the hint matches an added line: the regex finds
+    /// the spot, Jev confirms it and picks the fix.
+    pub gate: bool,
     pub judge: Judge,
     pub also_guarded_by: Vec<String>,
     pub examples: Vec<String>,
@@ -121,6 +131,11 @@ struct RawRule {
     paths: Vec<String>,
     #[serde(default)]
     hint: Option<String>,
+    /// Set by calibration (`dify-review backtest`).
+    #[serde(default)]
+    threshold: Option<f64>,
+    #[serde(default)]
+    gate: bool,
     #[serde(default)]
     also_guarded_by: Vec<String>,
     /// For people deciding what to turn into a dify guard; unused here.
@@ -215,11 +230,22 @@ pub fn parse_rule(id: &str, text: &str) -> Result<Rule> {
         (Some(_), Some(_)) => bail!(ctx("has both [noul] and [choice]")),
         (None, None) => bail!(ctx("needs [noul] or [choice]")),
     };
+    let threshold = r.threshold.unwrap_or(match judge {
+        Judge::Noul { .. } => NOUL_THRESHOLD,
+        Judge::Choice { .. } => CHOICE_THRESHOLD,
+    });
+    ensure!(
+        threshold > 0.0 && threshold <= 1.0,
+        ctx("threshold must be in (0, 1]")
+    );
+    ensure!(!r.gate || hint.is_some(), ctx("gate = true needs a hint"));
     Ok(Rule {
         id: RuleId(id.to_owned()),
         severity: r.severity,
+        threshold,
         paths,
         hint,
+        gate: r.gate,
         judge,
         also_guarded_by: r.also_guarded_by,
         examples: r.examples,

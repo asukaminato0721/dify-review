@@ -11,12 +11,8 @@ use dify_review_core::review::{Finding, Verdict, decide, decide_by_hint};
 use dify_review_core::rules::{Rule, RuleSet};
 use dify_review_github::GitHub;
 use dify_review_github::pr::{self, InlineComment, PullRequest};
-use dify_review_jev::{Jev, Usage};
-use serde_json::json;
+use dify_review_jev::{Jev, MAX_PATCH_CHARS, Usage, hunk_state};
 
-/// Jev's input limit is about 32k tokens for state plus one question; a
-/// hunk this large is skipped rather than truncated into a wrong answer.
-const MAX_HUNK_CHARS: usize = 60_000;
 /// Jev price per input token, for the cost line (output is free).
 const USD_PER_INPUT_TOKEN: f64 = 0.042 / 1_000_000.0;
 
@@ -141,12 +137,12 @@ async fn judge<'r>(
             .iter()
             .filter_map(|r| decide_by_hint(r, hunk).map(|v| (*r, v)))
             .collect(),
-        Some(_) if patch.len() > MAX_HUNK_CHARS => {
+        Some(_) if patch.len() > MAX_PATCH_CHARS => {
             tracing::warn!(path, header = %hunk.header, chars = patch.len(), "hunk too large for Jev, skipped");
             Vec::new()
         }
         Some(j) => {
-            let state = json!({ "title": pr.title, "path": path, "patch": patch });
+            let state = hunk_state(&pr.title, path, &patch);
             *asked += 1;
             match j.ask(&state, rules).await {
                 Ok((answers, u)) => {
@@ -157,7 +153,7 @@ async fn judge<'r>(
                         .filter_map(|r| {
                             answers
                                 .get(&r.id.0)
-                                .and_then(|ans| decide(r, ans))
+                                .and_then(|ans| decide(r, hunk, ans))
                                 .map(|v| (*r, v))
                         })
                         .collect()

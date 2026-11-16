@@ -1,5 +1,6 @@
 //! Data model and pure logic shared by every dify-review stage.
 
+pub mod backtest;
 pub mod diff;
 pub mod model;
 pub mod review;

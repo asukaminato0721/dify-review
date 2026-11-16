@@ -1,0 +1,522 @@
+# Which earlier review comment is an instance of which rule (and, for a
+# choice rule, which option). Positives for `dify-review backtest`.
+# Generated once by scripts/labels_v1.py; edit by hand from now on.
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45768#discussion_r4500494343'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46192#discussion_r4556514304'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46191#discussion_r4556533882'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46188#discussion_r4553205169'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45769#discussion_r4500489615'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45766#discussion_r4500498642'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45767#discussion_r4500496923'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45770#discussion_r4500488536'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45772#discussion_r4500484774'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45773#discussion_r4500485840'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45773#discussion_r4501140185'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45771#discussion_r4500487530'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45726#discussion_r4491689346'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45726#discussion_r4491690383'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44875#discussion_r4408651755'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45256#discussion_r4440387904'
+rule = 'no-type-ignore'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45768#discussion_r4505007988'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46404#discussion_r4577205798'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45648#discussion_r4488870073'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45819#discussion_r4505665941'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45819#discussion_r4505666389'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45819#discussion_r4505666598'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45729#discussion_r4491655409'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45725#discussion_r4500515284'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45726#discussion_r4491694394'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45731#discussion_r4491669682'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45261#discussion_r4464649445'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45261#discussion_r4464651182'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45180#discussion_r4430567006'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45180#discussion_r4430567856'
+rule = 'no-test-for-type-errors'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46308#discussion_r4577707282'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46422#discussion_r4577088037'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45875#discussion_r4511099640'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45472#discussion_r4464547086'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45472#discussion_r4465201021'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45472#discussion_r4465203178'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45320#discussion_r4441505447'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44775#discussion_r4374124655'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/40379#discussion_r3744122730'
+rule = 'tests-real-dependencies'
+option = 'import-real-class'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45876#discussion_r4511092860'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45331#discussion_r4450195948'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45633#discussion_r4488875529'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44888#discussion_r4408644607'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44888#discussion_r4420305690'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44888#discussion_r4420307376'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45698#discussion_r4489290449'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45146#discussion_r4469875484'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45142#discussion_r4469880570'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45458#discussion_r4464586759'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44881#discussion_r4450627568'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/46291#discussion_r4564662547'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44875#discussion_r4450633158'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/36191#discussion_r3548937501'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/42335#discussion_r4033575143'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/42248#discussion_r4014857559'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/41007#discussion_r3820932525'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/40797#discussion_r3788799793'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/40797#discussion_r3790746863'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45696#discussion_r4491633255'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45766#discussion_r4505010363'
+rule = 'tests-real-dependencies'
+option = 'use-sqlite-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45146#discussion_r4476516521'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45142#discussion_r4476533652'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/36842#discussion_r3338212303'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35203#discussion_r3085575785'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35203#discussion_r3091576444'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35203#discussion_r3091576879'
+rule = 'tests-real-dependencies'
+option = 'inject-dependency'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44888#discussion_r4397291611'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44817#discussion_r4379753985'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44817#discussion_r4384366472'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44816#discussion_r4378689031'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44816#discussion_r4384579941'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44775#discussion_r4374130007'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44815#discussion_r4376817976'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44822#discussion_r4376794921'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44820#discussion_r4376805128'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/43588#discussion_r4196652178'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/33108#discussion_r2899044985'
+rule = 'avoid-cast'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45757#discussion_r4521186931'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45876#discussion_r4511545106'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45168#discussion_r4471240847'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45168#discussion_r4471241513'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45458#discussion_r4464595002'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45458#discussion_r4464598580'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45458#discussion_r4464633119'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44458#discussion_r4332558277'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/42034#discussion_r4001910034'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/40379#discussion_r3744119342'
+rule = 'no-reflection'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/43112#discussion_r4129096490'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/42034#discussion_r4001911783'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/42034#discussion_r4037113695'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/40379#discussion_r3744084048'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37639#discussion_r3435610073'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37639#discussion_r3435610893'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37639#discussion_r3435612629'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37639#discussion_r3435613803'
+rule = 'inject-session'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45766#discussion_r4505010078'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45767#discussion_r4505008980'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45767#discussion_r4505009279'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45770#discussion_r4505012869'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45770#discussion_r4505013226'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/43588#discussion_r4196654446'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/36791#discussion_r3321695422'
+rule = 'precise-types'
+option = 'concrete-type'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45336#discussion_r4446310033'
+rule = 'precise-types'
+option = 'paramspec'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/39822#discussion_r3688086136'
+rule = 'precise-types'
+option = 'paramspec'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/39822#discussion_r3688086532'
+rule = 'precise-types'
+option = 'paramspec'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/45472#discussion_r4464553197'
+rule = 'precise-types'
+option = 'explicit-params'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44885#discussion_r4515672207'
+rule = 'model-nested-data'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37660#discussion_r3441137059'
+rule = 'model-nested-data'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35248#discussion_r3087743748'
+rule = 'model-nested-data'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35248#discussion_r3087747017'
+rule = 'model-nested-data'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44837#discussion_r4424553072'
+rule = 'no-bypass-init'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44775#discussion_r4374124655'
+rule = 'no-bypass-init'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/43112#discussion_r4536639533'
+rule = 'unrelated-change'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/43112#discussion_r4536640405'
+rule = 'unrelated-change'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/44898#discussion_r4389359422'
+rule = 'unrelated-change'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/38280#discussion_r3510172787'
+rule = 'unrelated-change'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/37950#discussion_r3476439980'
+rule = 'unrelated-change'
+
+[[label]]
+comment = 'https://github.com/langgenius/dify/pull/35804#discussion_r3193231742'
+rule = 'unrelated-change'

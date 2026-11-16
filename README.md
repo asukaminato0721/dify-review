@@ -16,7 +16,7 @@ arXiv:2605.30208): typed signals, thresholds calibrated on history, fail closed.
 | Collect review threads | `dify-review collect` | done |
 | Distill threads into rules | `scripts/distill_v1.py` (one-off) | done: `rules/*.toml` |
 | Review one pull request | `dify-review review --pr N [--post]` | done (dry run by default) |
-| Backtest and calibrate thresholds | `dify-review backtest` | next |
+| Backtest and calibrate thresholds | `dify-review backtest [--apply]` | done: `backtest/report.md` |
 | Scheduled review of open pull requests | GitHub Actions cron | planned |
 
 ## Collect
@@ -66,3 +66,22 @@ Configuration comes from the environment or a local `.env` (gitignored):
 | `GITHUB_TOKEN` / `GH_TOKEN` | GitHub token, else `gh auth token` |
 
 Rules live in `rules/<id>.toml`; see `rules/README.md`.
+
+## Backtest
+
+```sh
+cargo run --release -- backtest            # report per rule, suggest thresholds
+cargo run --release -- backtest --apply    # write the suggestions into rules/*.toml
+```
+
+Positives are the hunks behind the review comments listed in
+`backtest/labels.toml` (as they were when commented on). Negatives are the
+added hunks in the final diff of those merged pull requests. A reviewer does
+not comment every instance, so a negative that contains the rule's `hint`
+pattern counts as *tolerated* (a comment the bot should make), not noise.
+The suggested threshold maximises F0.5 among those with at least 50%
+precision. Jev answers are cached in `data/backtest-answers.jsonl` by request
+fingerprint, so a rerun only asks what changed.
+
+A rule with `gate = true` only comments where its `hint` matches an added
+line: the regex finds the spot, Jev confirms it and picks the fix.

@@ -8,6 +8,7 @@ use clap::{Parser, Subcommand};
 use dify_review_core::{Login, PrState, Repo, ReviewThread, ThreadId, since::parse_since};
 use dify_review_github::{GitHub, collect};
 
+mod backtest;
 mod review;
 
 #[derive(Parser)]
@@ -26,6 +27,8 @@ enum Cmd {
     Collect(CollectArgs),
     /// Judge one pull request against the rules; print or post inline comments.
     Review(review::ReviewArgs),
+    /// Measure each rule against labelled review history and suggest thresholds.
+    Backtest(backtest::BacktestArgs),
 }
 
 #[derive(clap::Args)]
@@ -63,6 +66,7 @@ async fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::Collect(args) => run_collect(args).await,
         Cmd::Review(args) => review::run(args).await,
+        Cmd::Backtest(args) => backtest::run(args).await,
     }
 }
 
