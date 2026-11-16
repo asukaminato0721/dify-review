@@ -149,6 +149,14 @@ impl GitHub {
         Ok(items)
     }
 
+    /// PUT a REST resource and decode the reply.
+    pub async fn put<T: DeserializeOwned>(&self, path: &str, body: &Value) -> Result<T> {
+        let page = self
+            .send(Method::PUT, &format!("{API}{path}"), Some(body))
+            .await?;
+        serde_json::from_str(&page.text).with_context(|| format!("decoding PUT {path}"))
+    }
+
     /// PATCH a REST resource and decode the reply.
     pub async fn patch<T: DeserializeOwned>(&self, path: &str, body: &Value) -> Result<T> {
         let page = self

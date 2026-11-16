@@ -125,4 +125,5 @@ cargo run --release -- refresh --since 30d --apply   # rewrite them
 ```
 
 After a rule's comment text changes, rewrites the text of comments already
-posted from it. Footer and marker stay, so dedupe and feedback still match.
+posted from it, and brings review summaries on the same pull requests to the
+current format. Footer and marker stay, so dedupe and feedback still match.

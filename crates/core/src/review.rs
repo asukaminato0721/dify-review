@@ -3,9 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::MARKER;
 use crate::diff::{Hunk, LineKind, NewLine};
 use crate::rules::{HintScope, Judge, OptionName, Rule, RuleId, Severity};
+use crate::{MARKER, Repo};
 
 /// Jev's answer to one rule's question.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -194,6 +194,66 @@ pub fn summary_marker(head: &str, trigger: Option<u64>) -> String {
     format!("{MARKER}:head={head}{trigger} -->")
 }
 
+/// Footer every review summary ends its text with.
+const SUMMARY_FOOTER: &str = "\n\n<sub>dify-codereview</sub>\n";
+
+/// A review summary: what was found at which head (linked to the commit in
+/// the pull request), who asked, and the marker recording the head and
+/// the asking comment.
+pub fn summary_body(
+    repo: &Repo,
+    pr: u64,
+    head: &str,
+    n: usize,
+    requester: Option<&str>,
+    trigger: Option<u64>,
+) -> String {
+    let who = requester
+        .map(|r| format!("Requested by @{r}. "))
+        .unwrap_or_default();
+    let short = &head[..head.len().min(10)];
+    let at = format!("[`{short}`](https://github.com/{repo}/pull/{pr}/commits/{head})");
+    let what = match n {
+        0 => format!("Nothing to flag at {at}."),
+        1 => format!(
+            "1 inline suggestion at {at}, from a rule learned from earlier reviews in this repository. Reply on the comment if it is wrong."
+        ),
+        n => format!(
+            "{n} inline suggestions at {at}, each from a rule learned from earlier reviews in this repository. Reply on a comment if it is wrong."
+        ),
+    };
+    format!(
+        "{who}{what}{SUMMARY_FOOTER}{}",
+        summary_marker(head, trigger)
+    )
+}
+
+/// A summary posted in an earlier format, rewritten as `summary_body` would
+/// write it now. None when it is current or is not a dify-review summary.
+pub fn refreshed_summary(body: &str, repo: &Repo, pr: u64) -> Option<String> {
+    let head = marker_values(body, "head").into_iter().next()?;
+    let trigger = marker_values(body, "trigger")
+        .into_iter()
+        .next()
+        .and_then(|t| t.parse().ok());
+    let text = body.split(SUMMARY_FOOTER).next()?;
+    let requester = text
+        .strip_prefix("Requested by @")
+        .and_then(|r| r.split(". ").next());
+    let n = match text.contains("Nothing to flag") {
+        true => 0,
+        false => text
+            .split(" inline suggestion")
+            .next()?
+            .rsplit(' ')
+            .next()?
+            .parse()
+            .ok()?,
+    };
+    let fresh = summary_body(repo, pr, &head, n, requester, trigger);
+    (fresh != body).then_some(fresh)
+}
+
 /// Whether `body` mentions `handle` (e.g. `@dify-review`) as a whole word:
 /// not inside an e-mail address and not as the prefix of a longer handle.
 pub fn mentions(body: &str, handle: &str) -> bool {
@@ -346,6 +406,32 @@ mod tests {
             refreshed_body(&stale.replace("rule=no-type-ignore", "rule=gone"), &rules),
             None
         );
+    }
+
+    #[test]
+    fn summary_links_the_commit_and_refreshes_old_ones() {
+        let repo: Repo = "o/r".parse().unwrap();
+        let head = "d689cee60fabcdef";
+        let one = summary_body(&repo, 7, head, 1, None, None);
+        assert!(one.starts_with("1 inline suggestion at [`d689cee60f`](https://github.com/o/r/pull/7/commits/d689cee60fabcdef), from"));
+        assert_eq!(refreshed_summary(&one, &repo, 7), None);
+        let old = format!(
+            "Requested by @me. 3 inline suggestion(s) at `d689cee60f`, each from a rule.\n\n<sub>dify-codereview</sub>\n{}",
+            summary_marker(head, Some(9))
+        );
+        assert_eq!(
+            refreshed_summary(&old, &repo, 7).unwrap(),
+            summary_body(&repo, 7, head, 3, Some("me"), Some(9))
+        );
+        let nothing = format!(
+            "Nothing to flag at `d689cee60f`.\n\n<sub>dify-codereview</sub>\n{}",
+            summary_marker(head, None)
+        );
+        assert_eq!(
+            refreshed_summary(&nothing, &repo, 7).unwrap(),
+            summary_body(&repo, 7, head, 0, None, None)
+        );
+        assert_eq!(refreshed_summary("a human review", &repo, 7), None);
     }
 
     #[test]

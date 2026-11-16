@@ -374,6 +374,7 @@ pub struct PostedComment {
     pub id: u64,
     pub url: String,
     pub body: String,
+    pub pr: u64,
 }
 
 #[derive(Deserialize)]
@@ -381,6 +382,7 @@ struct RawPostedComment {
     id: u64,
     html_url: String,
     body: String,
+    pull_request_url: String,
 }
 
 /// Every dify-review inline comment in the repository updated since `since`.
@@ -397,10 +399,14 @@ pub async fn bot_comments_since(
     Ok(all
         .into_iter()
         .filter(|c| !marker_values(&c.body, "rule").is_empty())
-        .map(|c| PostedComment {
-            id: c.id,
-            url: c.html_url,
-            body: c.body,
+        .filter_map(|c| {
+            let pr = c.pull_request_url.rsplit('/').next()?.parse().ok()?;
+            Some(PostedComment {
+                id: c.id,
+                url: c.html_url,
+                body: c.body,
+                pr,
+            })
         })
         .collect())
 }
@@ -410,6 +416,31 @@ pub async fn edit_comment(gh: &GitHub, repo: &Repo, id: u64, body: &str) -> Resu
     let _: serde_json::Value = gh
         .patch(
             &format!("/repos/{repo}/pulls/comments/{id}"),
+            &serde_json::json!({ "body": body }),
+        )
+        .await?;
+    Ok(())
+}
+
+/// A review on a pull request, with the id needed to edit it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReviewSummary {
+    pub id: u64,
+    #[serde(default)]
+    pub body: Option<String>,
+    pub html_url: String,
+}
+
+pub async fn reviews(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<ReviewSummary>> {
+    gh.get_all(&format!("/repos/{repo}/pulls/{number}/reviews"))
+        .await
+}
+
+/// Replace a review's summary text.
+pub async fn edit_review(gh: &GitHub, repo: &Repo, number: u64, id: u64, body: &str) -> Result<()> {
+    let _: serde_json::Value = gh
+        .put(
+            &format!("/repos/{repo}/pulls/{number}/reviews/{id}"),
             &serde_json::json!({ "body": body }),
         )
         .await?;

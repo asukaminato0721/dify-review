@@ -9,7 +9,7 @@ use anyhow::Result;
 use dify_review_core::Repo;
 use dify_review_core::diff::Hunk;
 use dify_review_core::review::{
-    Finding, Verdict, decide_at, decide_by_hint, posting_threshold, summary_marker,
+    Finding, Verdict, decide_at, decide_by_hint, posting_threshold, summary_body,
 };
 use dify_review_core::rules::{Rule, RuleId, RuleSet};
 use dify_review_github::GitHub;
@@ -195,7 +195,7 @@ impl Reviewer {
                         body: f.body(),
                     })
                     .collect();
-                let summary = summary(pr, comments.len(), ask.as_ref());
+                let summary = summary(&self.repo, pr, comments.len(), ask.as_ref());
                 let review = pr::post_review(&self.gh, &self.repo, pr, &summary, &comments).await?;
                 eprintln!("\nposted: {}", review.html_url);
                 Ok(())
@@ -208,20 +208,14 @@ fn short(sha: &str) -> &str {
     &sha[..sha.len().min(10)]
 }
 
-fn summary(pr: &PullRequest, n: usize, ask: Option<&Ask<'_>>) -> String {
-    let who = ask
-        .map(|a| format!("Requested by @{}. ", a.author))
-        .unwrap_or_default();
-    let what = match n {
-        0 => format!("Nothing to flag at `{}`.", short(&pr.head.0)),
-        n => format!(
-            "{n} inline suggestion(s) at `{}`, each from a rule learned from earlier reviews in this repository. Reply on a comment if it is wrong.",
-            short(&pr.head.0)
-        ),
-    };
-    format!(
-        "{who}{what}\n\n<sub>dify-codereview</sub>\n{}",
-        summary_marker(&pr.head.0, ask.map(|a| a.comment_id))
+fn summary(repo: &Repo, pr: &PullRequest, n: usize, ask: Option<&Ask<'_>>) -> String {
+    summary_body(
+        repo,
+        pr.number,
+        &pr.head.0,
+        n,
+        ask.map(|a| a.author),
+        ask.map(|a| a.comment_id),
     )
 }
 

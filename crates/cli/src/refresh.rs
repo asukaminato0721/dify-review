@@ -4,7 +4,9 @@
 
 use anyhow::Result;
 use dify_review_core::Repo;
-use dify_review_core::review::refreshed_body;
+use std::collections::BTreeSet;
+
+use dify_review_core::review::{refreshed_body, refreshed_summary};
 use dify_review_core::rules::RuleSet;
 use dify_review_core::since::parse_since;
 use dify_review_github::{GitHub, pr};
@@ -49,6 +51,30 @@ pub async fn run(a: RefreshArgs) -> Result<()> {
             pr::edit_comment(&gh, &a.repo, c.id, body).await?;
         }
     }
+    // Review summaries on the same pull requests.
+    let prs: BTreeSet<u64> = posted.iter().map(|c| c.pr).collect();
+    let mut summaries = 0usize;
+    for number in &prs {
+        let reviews = pr::reviews(&gh, &a.repo, *number).await?;
+        let stale: Vec<_> = reviews
+            .iter()
+            .filter_map(|r| {
+                let body = r.body.as_deref()?;
+                refreshed_summary(body, &a.repo, *number).map(|b| (r, b))
+            })
+            .collect();
+        summaries += stale.len();
+        for (r, body) in &stale {
+            println!("{} [summary]", r.html_url);
+            if a.apply {
+                pr::edit_review(&gh, &a.repo, *number, r.id, body).await?;
+            }
+        }
+    }
+    eprintln!(
+        "{summaries} review summary(ies) in an older format on {} pull request(s)",
+        prs.len()
+    );
     eprintln!(
         "{}",
         match a.apply {
