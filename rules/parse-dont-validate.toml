@@ -2,7 +2,7 @@
 # Principle: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
 # Tests too: `assert isinstance(x, dict)` narrowing is still validating; parse into a model instead.
 severity = 'nit'
-threshold = 0.40
+threshold = 0.30
 paths = ['api/**/*.py']
 gate = true
 hint = '''dict\[str, ?(?:object|Any)\]|Mapping\[str, ?(?:object|Any)\]|\]\[["']|\.get\(["'][^"']+["'], ?(?:\{\}|\[\])\)|isinstance\([^)]*,\s*(?:dict|Mapping)\)|TypeAdapter\(dict'''
@@ -16,6 +16,6 @@ examples = [
 
 [noul]
 question = '''
-Does `patch` pass around or inspect loosely typed data instead of parsing it once into a type: values typed dict[str, object], dict[str, Any] or Mapping; chained key lookups like d["a"]["b"]; .get() with {} or [] defaults; isinstance checks on dict values; or hand-written checks that raise on missing or wrong-typed keys, where a pydantic model, dataclass or TypedDict parsed at the boundary would guarantee the shape?'''
+Does `patch` pass around or inspect loosely typed data instead of parsing it once into a type: values typed dict[str, object], dict[str, Any] or Mapping; chained key lookups like d["a"]["b"]; .get() with {} or [] defaults; isinstance checks on dict values; or hand-written checks that raise on missing or wrong-typed keys, where a pydantic model, dataclass or TypedDict parsed at the boundary would guarantee the shape? In tests this includes building a config or payload as an ad hoc dict[str, object] literal whose shape the production code should define.'''
 comment = '''
-Parse, don't validate (https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/): model this data once at the boundary as a pydantic model / dataclass / TypedDict (`Model.model_validate(raw)`), and pass the typed value on, instead of passing dicts around and re-checking keys and types where they are used.'''
+Parse, don't validate (https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/): model this data once at the boundary as a pydantic model / dataclass / TypedDict (`Model.model_validate(raw)`), and pass the typed value on, instead of passing dicts around and re-checking keys and types where they are used. In a test, don't build this as an ad hoc `dict[str, object]`: define the shape (TypedDict / model) in the production code and import it here.'''
