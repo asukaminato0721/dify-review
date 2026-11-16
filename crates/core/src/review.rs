@@ -4,8 +4,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::MARKER;
-use crate::diff::{Hunk, NewLine};
-use crate::rules::{Judge, OptionName, Rule, RuleId, Severity};
+use crate::diff::{Hunk, LineKind, NewLine};
+use crate::rules::{HintScope, Judge, OptionName, Rule, RuleId, Severity};
 
 /// Jev's answer to one rule's question.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -71,9 +71,17 @@ pub fn decide_by_hint(rule: &Rule, hunk: &Hunk) -> Option<Verdict> {
     }
 }
 
+/// The first line in the rule's hint scope the hint matches. Removed lines
+/// never count: a comment can only sit on the new side.
 fn hint_match<'h>(rule: &Rule, hunk: &'h Hunk) -> Option<(NewLine, &'h str)> {
     let hint = rule.hint.as_ref()?;
-    hunk.added()
+    let in_scope = |kind: LineKind| match rule.hint_scope {
+        HintScope::Added => kind == LineKind::Added,
+        HintScope::Hunk => kind != LineKind::Removed,
+    };
+    hunk.lines
+        .iter()
+        .filter(|l| in_scope(l.kind))
         .find(|l| hint.is_match(&l.text))
         .and_then(|l| l.new_line.map(|n| (n, l.text.as_str())))
 }
@@ -216,6 +224,22 @@ mod tests {
         assert_eq!(anchor(&rules[1], &hunk).unwrap().0, NewLine(2));
         assert!(decide_by_hint(&rules[0], &hunk).is_some());
         assert!(decide_by_hint(&rules[1], &hunk).is_none());
+    }
+
+    #[test]
+    fn hint_scope_hunk_also_matches_context_lines() {
+        let gated = |scope: &str| {
+            let text = format!(
+                "severity = 'nit'\npaths = ['**']\ngate = true\nhint_scope = '{scope}'\nhint = 'MagicMock'\n[noul]\nquestion = 'q'\ncomment = 'c'\n"
+            );
+            crate::rules::parse_rule("r", &text).unwrap()
+        };
+        let hunk = parse_patch("@@ -1,2 +1,3 @@\n m = MagicMock()\n+x: int = 1\n y")
+            .unwrap()
+            .remove(0);
+        assert!(!passes_gate(&gated("added"), &hunk));
+        assert!(passes_gate(&gated("hunk"), &hunk));
+        assert_eq!(anchor(&gated("hunk"), &hunk).unwrap().0, NewLine(1));
     }
 
     #[test]

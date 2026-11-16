@@ -75,7 +75,10 @@ cargo run --release -- backtest --apply    # write the suggestions into rules/*.
 ```
 
 Positives are the hunks behind the review comments listed in
-`backtest/labels.toml` (as they were when commented on). Negatives are the
+`backtest/labels.toml`, in full, as they were when commented on: GitHub's
+`diff_hunk` stops at the commented line, so the hunk is taken from the pull
+request's `base...commit` diff at the comment's commit (cached in
+`data/backtest-hunks.jsonl`), falling back to the truncated one. Negatives are the
 added hunks in the final diff of those merged pull requests. A reviewer does
 not comment every instance, so a negative that contains the rule's `hint`
 pattern counts as *tolerated* (a comment the bot should make), not noise.
@@ -83,5 +86,9 @@ The suggested threshold maximises F0.5 among those with at least 50%
 precision. Jev answers are cached in `data/backtest-answers.jsonl` by request
 fingerprint, so a rerun only asks what changed.
 
-A rule with `gate = true` only comments where its `hint` matches an added
-line: the regex finds the spot, Jev confirms it and picks the fix.
+A rule with `gate = true` only comments where its `hint` matches: the regex
+finds the spot, Jev confirms it and picks the fix. `hint_scope = 'hunk'`
+also matches unchanged lines of a touched hunk (asking the author to fix code
+next to their change); the default `added` matches added lines only. The
+report lists every missed comment with Jev's answer, to tell a bad question
+from a bad label.

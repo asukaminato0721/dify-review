@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, ensure};
 use dify_review_core::backtest::{Label, Row, RuleReport, Sample, evaluate};
-use dify_review_core::diff::{Hunk, parse_patch};
+use dify_review_core::diff::{Hunk, NewLine, parse_patch};
 use dify_review_core::review::Answer;
 use dify_review_core::rules::{Judge, OptionName, Rule, RuleId, RuleSet};
 use dify_review_core::{PrState, Repo, ReviewThread};
@@ -31,6 +31,9 @@ pub struct BacktestArgs {
     labels: PathBuf,
     #[arg(long, default_value = "rules")]
     rules: PathBuf,
+    /// Full hunks of the labelled comments, fetched once.
+    #[arg(long, default_value = "data/backtest-hunks.jsonl")]
+    hunks: PathBuf,
     /// Jev answers by request fingerprint; reruns only ask what changed.
     #[arg(long, default_value = "data/backtest-answers.jsonl")]
     cache: PathBuf,
@@ -81,8 +84,8 @@ pub async fn run(a: BacktestArgs) -> Result<()> {
     let labels = load_labels(&a.labels, &rules)?;
     let threads = load_threads(&a.threads)?;
 
-    let positives = positive_samples(&threads, &labels)?;
     let gh = GitHub::from_env().await?;
+    let positives = positive_samples(&gh, &threads, &labels, &a.hunks).await?;
     let negatives = negative_samples(&gh, &threads, &labels).await?;
     tracing::info!(
         positives = positives.len(),
@@ -176,19 +179,69 @@ fn load_threads(path: &Path) -> Result<HashMap<String, ReviewThread>> {
         .collect()
 }
 
-/// The hunk each labelled comment was left on, as it was at that moment.
-fn positive_samples(
+/// The full hunk each labelled comment was left on, as it was when the
+/// comment was written. GitHub's own `diff_hunk` stops at the commented
+/// line, which hides what follows it (a fixture's body under its `def`),
+/// so the hunk is fetched from the pull request's diff at the comment's
+/// commit; when that fails the truncated one is used.
+async fn positive_samples(
+    gh: &GitHub,
     threads: &HashMap<String, ReviewThread>,
     labels: &BTreeMap<String, Vec<Label>>,
+    hunk_cache: &Path,
 ) -> Result<Vec<Pending>> {
-    let all = labels
+    let wanted = labels
         .iter()
         .map(|(url, ls)| {
-            let t = threads
+            threads
                 .get(url)
-                .with_context(|| format!("labelled comment {url} is not in the threads file"))?;
-            let hunk = parse_patch(&t.diff_hunk)
-                .with_context(|| format!("diff hunk of {url}"))?
+                .map(|t| (url, ls, t))
+                .with_context(|| format!("labelled comment {url} is not in the threads file"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let mut cache = load_hunk_cache(hunk_cache)?;
+    let missing: Vec<_> = wanted
+        .iter()
+        .filter(|(url, _, _)| !cache.contains_key(*url))
+        .map(|(url, _, t)| ((*url).clone(), *t))
+        .collect();
+    tracing::info!(cached = cache.len(), to_fetch = missing.len(), "full hunks");
+    let fetched = stream::iter(missing)
+        .map(|(url, t)| async move {
+            let res = full_hunk(gh, t, &url).await;
+            (url, res)
+        })
+        .buffer_unordered(4)
+        .collect::<Vec<_>>()
+        .await;
+    let mut out = BufWriter::new(
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(hunk_cache)?,
+    );
+    fetched.into_iter().try_for_each(|(url, res)| -> Result<()> {
+        match res {
+            Ok(patch) => {
+                serde_json::to_writer(&mut out, &HunkLine { comment: url.clone(), patch: patch.clone() })?;
+                out.write_all(b"\n")?;
+                cache.insert(url, patch);
+            }
+            Err(e) => tracing::warn!(%url, error = %e, "full hunk unavailable, using the truncated one"),
+        }
+        Ok(())
+    })?;
+    out.flush()?;
+
+    let mut full = 0usize;
+    let all = wanted
+        .into_iter()
+        .map(|(url, ls, t)| {
+            let fetched = cache.get(url).cloned().flatten();
+            full += usize::from(fetched.is_some());
+            let text = fetched.unwrap_or_else(|| t.diff_hunk.clone());
+            let hunk = parse_patch(&text)
+                .with_context(|| format!("hunk of {url}"))?
                 .pop();
             // A file-level comment has no hunk to judge.
             if hunk.is_none() {
@@ -203,7 +256,59 @@ fn positive_samples(
             }))
         })
         .collect::<Result<Vec<_>>>()?;
+    tracing::info!(full, total = all.len(), "positives with their full hunk");
     Ok(all.into_iter().flatten().collect())
+}
+
+/// One fetched hunk; `patch: None` records that it could not be found, so
+/// it is not asked again.
+#[derive(Serialize, Deserialize)]
+struct HunkLine {
+    comment: String,
+    patch: Option<String>,
+}
+
+fn load_hunk_cache(path: &Path) -> Result<HashMap<String, Option<String>>> {
+    match path.exists() {
+        false => Ok(HashMap::new()),
+        true => BufReader::new(File::open(path)?)
+            .lines()
+            .collect::<std::io::Result<Vec<_>>>()?
+            .iter()
+            .filter(|l| !l.trim().is_empty())
+            .map(|l| {
+                let h: HunkLine = serde_json::from_str(l)?;
+                Ok((h.comment, h.patch))
+            })
+            .collect(),
+    }
+}
+
+/// The hunk of the pull request's diff, at the comment's commit, that the
+/// comment's `diff_hunk` starts: same header, else the one holding its line.
+/// Ok(None): the file or hunk is not in that diff.
+async fn full_hunk(gh: &GitHub, t: &ReviewThread, url: &str) -> Result<Option<String>> {
+    let id: u64 = url
+        .rsplit_once("#discussion_r")
+        .and_then(|(_, id)| id.parse().ok())
+        .with_context(|| format!("no comment id in {url}"))?;
+    let commit = pr::review_comment_commit(gh, &t.repo, id).await?;
+    let base = pr::pull_request(gh, &t.repo, t.pr.number).await?.base_ref;
+    let files = pr::compare_files(gh, &t.repo, &base, &commit).await?;
+    let header = t.diff_hunk.lines().next().unwrap_or_default();
+    let line = t.original_line.map(NewLine);
+    Ok(files
+        .into_iter()
+        .find(|f| f.path == t.path)
+        .and_then(|f| {
+            let by_header = f.hunks.iter().find(|h| h.header == header).cloned();
+            by_header.or_else(|| {
+                f.hunks
+                    .into_iter()
+                    .find(|h| line.is_some() && h.lines.iter().any(|l| l.new_line == line))
+            })
+        })
+        .map(|h| h.render()))
 }
 
 /// Every added hunk in the final diff of the merged pull requests the labels
@@ -470,7 +575,7 @@ fn write_report(path: &Path, reports: &[RuleReport], samples: usize) -> Result<(
         let list = |title: &str, items: &[String]| match items.is_empty() {
             true => Vec::new(),
             false => std::iter::once(format!("\n{title} ({}):\n", items.len()))
-                .chain(items.iter().take(15).map(|o| format!("- {o}")))
+                .chain(items.iter().take(40).map(|o| format!("- {o}")))
                 .collect(),
         };
         md.extend(list("Missed comments", &r.missed));

@@ -14,11 +14,14 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::diff::Hunk;
-use crate::review::{Answer, decide_at};
+use crate::review::{Answer, decide_at, passes_gate};
 use crate::rules::{OptionName, Rule, RuleId};
 
 /// Thresholds tried for every rule.
-pub const GRID: [f64; 10] = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95];
+/// Low values matter for choice rules: confidence is spread over options.
+pub const GRID: [f64; 14] = [
+    0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
+];
 /// Precision is weighted over recall: a wrong comment costs more trust
 /// than a missed one.
 const BETA: f64 = 0.5;
@@ -154,7 +157,22 @@ pub fn evaluate(rule: &Rule, samples: &[Sample]) -> RuleReport {
     let missed = positives
         .iter()
         .filter(|(s, _)| verdict(s, at).is_none())
-        .map(|(s, _)| s.origin.clone())
+        .map(|(s, l)| {
+            let why = match s.answers.get(&rule.id.0) {
+                None => "not asked".to_owned(),
+                Some(_) if !passes_gate(rule, &s.hunk) => "hint not matched in scope".to_owned(),
+                Some(Answer::Noul(p)) => format!("jev {p:.2}"),
+                Some(Answer::Choice { choice, confidence }) => {
+                    format!("jev {choice} {confidence:.2}")
+                }
+            };
+            let want = l
+                .option
+                .as_ref()
+                .map(|o| format!(", labelled {o}"))
+                .unwrap_or_default();
+            format!("{} ({why}{want})", s.origin)
+        })
         .collect();
     let fired_at = |want_hint: bool| {
         negatives

@@ -22,6 +22,8 @@ pub struct PullRequest {
     pub number: u64,
     pub title: String,
     pub head: CommitSha,
+    /// The branch it merges into, e.g. `main`.
+    pub base_ref: String,
     pub open: bool,
     pub draft: bool,
 }
@@ -40,11 +42,18 @@ struct RawPr {
     #[serde(default)]
     draft: bool,
     head: RawHead,
+    base: RawBase,
 }
 
 #[derive(Deserialize)]
 struct RawHead {
     sha: CommitSha,
+}
+
+#[derive(Deserialize)]
+struct RawBase {
+    #[serde(rename = "ref")]
+    branch: String,
 }
 
 #[derive(Deserialize)]
@@ -67,6 +76,7 @@ pub async fn pull_request(gh: &GitHub, repo: &Repo, number: u64) -> Result<PullR
         number: pr.number,
         title: pr.title,
         head: pr.head.sha,
+        base_ref: pr.base.branch,
         open: pr.state == "open",
         draft: pr.draft,
     })
@@ -78,6 +88,43 @@ pub async fn changed_files(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<
     let files: Vec<RawFile> = gh
         .get_all(&format!("/repos/{repo}/pulls/{number}/files"))
         .await?;
+    reviewable(files)
+}
+
+#[derive(Deserialize)]
+struct RawCompare {
+    #[serde(default)]
+    files: Vec<RawFile>,
+}
+
+/// The pull request's diff as of `head`: what `base...head` shows, the
+/// changes since the branch left `base`.
+pub async fn compare_files(
+    gh: &GitHub,
+    repo: &Repo,
+    base: &str,
+    head: &CommitSha,
+) -> Result<Vec<ChangedFile>> {
+    let cmp: RawCompare = gh
+        .get(&format!("/repos/{repo}/compare/{base}...{}", head.0))
+        .await?;
+    reviewable(cmp.files)
+}
+
+#[derive(Deserialize)]
+struct RawReviewComment {
+    original_commit_id: CommitSha,
+}
+
+/// The commit a review comment was written against.
+pub async fn review_comment_commit(gh: &GitHub, repo: &Repo, comment_id: u64) -> Result<CommitSha> {
+    let c: RawReviewComment = gh
+        .get(&format!("/repos/{repo}/pulls/comments/{comment_id}"))
+        .await?;
+    Ok(c.original_commit_id)
+}
+
+fn reviewable(files: Vec<RawFile>) -> Result<Vec<ChangedFile>> {
     files
         .into_iter()
         .filter(|f| f.status != "removed")

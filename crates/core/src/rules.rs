@@ -40,6 +40,18 @@ pub enum Severity {
     Should,
 }
 
+/// Which lines of a hunk the hint is matched against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum HintScope {
+    /// Lines the pull request adds.
+    #[default]
+    Added,
+    /// Added and unchanged lines of a hunk the pull request touches: for
+    /// asking the author to fix code next to their change.
+    Hunk,
+}
+
 #[derive(Debug, Clone)]
 pub struct ChoiceOption {
     pub name: OptionName,
@@ -75,8 +87,9 @@ pub struct Rule {
     /// Places the comment on the first matching added line; judges alone
     /// when no Jev key is configured.
     pub hint: Option<Regex>,
-    /// Comment only where the hint matches an added line: the regex finds
-    /// the spot, Jev confirms it and picks the fix.
+    pub hint_scope: HintScope,
+    /// Comment only where the hint matches: the regex finds the spot, Jev
+    /// confirms it and picks the fix.
     pub gate: bool,
     pub judge: Judge,
     pub also_guarded_by: Vec<String>,
@@ -136,6 +149,8 @@ struct RawRule {
     threshold: Option<f64>,
     #[serde(default)]
     gate: bool,
+    #[serde(default)]
+    hint_scope: HintScope,
     #[serde(default)]
     also_guarded_by: Vec<String>,
     /// For people deciding what to turn into a dify guard; unused here.
@@ -246,6 +261,7 @@ pub fn parse_rule(id: &str, text: &str) -> Result<Rule> {
         paths,
         hint,
         gate: r.gate,
+        hint_scope: r.hint_scope,
         judge,
         also_guarded_by: r.also_guarded_by,
         examples: r.examples,
