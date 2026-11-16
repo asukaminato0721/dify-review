@@ -1,11 +1,11 @@
 //! Pull review threads of recently updated pull requests.
 
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
 use dify_review_core::{
     AuthorKind, Comment, Login, PrState, PullRequestMeta, Repo, ReviewThread, SCHEMA_VERSION,
     ThreadFlags, ThreadId,
 };
+use jiff::Timestamp;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -107,7 +107,7 @@ struct Actor {
 struct GqlComment {
     database_id: Option<i64>,
     body: String,
-    created_at: DateTime<Utc>,
+    created_at: Timestamp,
     diff_hunk: String,
     url: String,
     author: Option<Actor>,
@@ -134,9 +134,9 @@ struct GqlPr {
     url: String,
     title: String,
     state: GqlPrState,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    merged_at: Option<DateTime<Utc>>,
+    created_at: Timestamp,
+    updated_at: Timestamp,
+    merged_at: Option<Timestamp>,
     author: Option<Actor>,
     review_threads: Conn<GqlThread>,
 }
@@ -209,7 +209,7 @@ rate_limited!(PrsData, MoreThreadsData, MoreCommentsData);
 
 pub struct CollectOptions {
     pub repo: Repo,
-    pub since: DateTime<Utc>,
+    pub since: Timestamp,
     pub states: Vec<PrState>,
     pub max_prs: Option<usize>,
 }

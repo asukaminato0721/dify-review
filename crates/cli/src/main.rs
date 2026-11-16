@@ -8,6 +8,8 @@ use clap::{Parser, Subcommand};
 use dify_review_core::{Login, PrState, Repo, ReviewThread, ThreadId, since::parse_since};
 use dify_review_github::{GitHub, collect};
 
+mod review;
+
 #[derive(Parser)]
 #[command(
     version,
@@ -22,6 +24,8 @@ struct Cli {
 enum Cmd {
     /// Download inline review threads as JSONL, one thread per line.
     Collect(CollectArgs),
+    /// Judge one pull request against the rules; print or post inline comments.
+    Review(review::ReviewArgs),
 }
 
 #[derive(clap::Args)]
@@ -54,13 +58,16 @@ async fn main() -> Result<()> {
         .with_writer(std::io::stderr)
         .init();
 
+    // Local secrets (TYPESAFE_API_KEY, JEV_BASE_URL); real env vars win.
+    dotenvy::dotenv().ok();
     match Cli::parse().cmd {
         Cmd::Collect(args) => run_collect(args).await,
+        Cmd::Review(args) => review::run(args).await,
     }
 }
 
 async fn run_collect(a: CollectArgs) -> Result<()> {
-    let since = parse_since(&a.since, chrono::Utc::now())?;
+    let since = parse_since(&a.since, jiff::Timestamp::now())?;
     let seen = if a.append && a.out.exists() {
         existing_ids(&a.out)?
     } else {
@@ -77,7 +84,7 @@ async fn run_collect(a: CollectArgs) -> Result<()> {
     let mut w = BufWriter::new(file);
 
     let gh = GitHub::from_env().await?;
-    tracing::info!(repo = %a.repo, since = %since.to_rfc3339(), out = %a.out.display(), "collecting");
+    tracing::info!(repo = %a.repo, since = %since, out = %a.out.display(), "collecting");
     let opts = collect::CollectOptions {
         repo: a.repo,
         since,

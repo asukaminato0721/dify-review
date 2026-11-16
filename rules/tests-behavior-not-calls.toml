@@ -1,0 +1,11 @@
+# Added by hand (asukaminato0721, 2026-11-16): not distilled from threads yet.
+severity = 'should'
+paths = ['api/tests/**/*.py', 'api/providers/**/tests/**/*.py']
+hint = '\.assert_(?:called|not_called|any_call|has_calls)\w*\(|\.call_count\b|\.call_args(?:_list)?\b|\.mock_calls\b'
+examples = []
+
+[noul]
+question = '''
+Does the test in `patch` pin how a collaborator was called (`assert_called_once_with`, `assert_called_once`, `assert_has_calls`, `call_count`, `call_args`, `mock_calls`) instead of asserting the observable behaviour: the return value, rows persisted, the error raised, the event or response produced?'''
+comment = '''
+Please don't pin the exact calls here (`assert_called_once_with` and friends): that breaks on harmless refactors and only proves the mock was hit. Assert the general behaviour instead: what is returned, persisted, raised or emitted.'''

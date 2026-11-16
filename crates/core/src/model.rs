@@ -4,7 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use anyhow::{Error, bail};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// Bumped whenever a field changes meaning, so later stages can refuse
@@ -143,7 +143,7 @@ pub struct Comment {
     pub author: Option<Login>,
     pub author_kind: AuthorKind,
     pub body: String,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
     pub url: String,
 }
 
@@ -175,8 +175,8 @@ pub struct PullRequestMeta {
     pub title: String,
     pub author: Option<Login>,
     pub state: PrState,
-    pub created_at: DateTime<Utc>,
-    pub merged_at: Option<DateTime<Utc>>,
+    pub created_at: Timestamp,
+    pub merged_at: Option<Timestamp>,
 }
 
 /// An inline review thread: the hunk it was left on and every comment in it.
@@ -246,7 +246,7 @@ mod tests {
             author: Some(Login(author.into())),
             author_kind: kind,
             body: body.into(),
-            created_at: DateTime::UNIX_EPOCH,
+            created_at: Timestamp::UNIX_EPOCH,
             url: String::new(),
         }
     }

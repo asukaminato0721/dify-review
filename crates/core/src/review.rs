@@ -1,0 +1,225 @@
+//! From a rule and a hunk to an inline comment: decide from Jev's answer
+//! (or the hint alone), anchor on a line, render with a dedupe marker.
+
+use serde::Serialize;
+
+use crate::MARKER;
+use crate::diff::{Hunk, NewLine};
+use crate::rules::{Judge, OptionName, Rule, RuleId, Severity};
+
+/// A noul answer at or above this probability comments.
+pub const NOUL_THRESHOLD: f64 = 0.7;
+/// A choice answer comments when its top option has a comment and Jev's
+/// confidence is at least this.
+pub const CHOICE_MIN_CONFIDENCE: f64 = 0.6;
+
+/// Jev's answer to one rule's question.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Answer {
+    Noul(f64),
+    Choice { choice: OptionName, confidence: f64 },
+}
+
+/// What a rule says about a hunk, before it is placed on a line.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Verdict {
+    pub option: Option<OptionName>,
+    /// Probability (noul) or confidence (choice); 1.0 for a hint match.
+    pub score: f64,
+    pub comment: String,
+}
+
+/// Decide from Jev's answer. An answer of the wrong shape for the rule is
+/// ignored (no comment) rather than guessed at.
+pub fn decide(rule: &Rule, answer: &Answer) -> Option<Verdict> {
+    match (&rule.judge, answer) {
+        (Judge::Noul { comment, .. }, Answer::Noul(p)) => (*p >= NOUL_THRESHOLD).then(|| Verdict {
+            option: None,
+            score: *p,
+            comment: comment.clone(),
+        }),
+        (Judge::Choice { options, .. }, Answer::Choice { choice, confidence }) => options
+            .iter()
+            .find(|o| &o.name == choice)
+            .and_then(|o| o.comment.clone())
+            .filter(|_| *confidence >= CHOICE_MIN_CONFIDENCE)
+            .map(|comment| Verdict {
+                option: Some(choice.clone()),
+                score: *confidence,
+                comment,
+            }),
+        _ => None,
+    }
+}
+
+/// Without Jev: a noul rule comments when its hint matches an added line.
+/// Choice rules need Jev to pick the fix, so they stay silent.
+pub fn decide_by_hint(rule: &Rule, hunk: &Hunk) -> Option<Verdict> {
+    match &rule.judge {
+        Judge::Noul { comment, .. } => hint_match(rule, hunk).map(|_| Verdict {
+            option: None,
+            score: 1.0,
+            comment: comment.clone(),
+        }),
+        Judge::Choice { .. } => None,
+    }
+}
+
+fn hint_match<'h>(rule: &Rule, hunk: &'h Hunk) -> Option<(NewLine, &'h str)> {
+    let hint = rule.hint.as_ref()?;
+    hunk.added()
+        .find(|l| hint.is_match(&l.text))
+        .and_then(|l| l.new_line.map(|n| (n, l.text.as_str())))
+}
+
+/// Where the comment goes: the first added line the hint matches, else the
+/// first added line of the hunk.
+pub fn anchor<'h>(rule: &Rule, hunk: &'h Hunk) -> Option<(NewLine, &'h str)> {
+    hint_match(rule, hunk).or_else(|| {
+        hunk.added()
+            .next()
+            .and_then(|l| l.new_line.map(|n| (n, l.text.as_str())))
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Finding {
+    pub rule: RuleId,
+    pub severity: Severity,
+    pub path: String,
+    pub line: NewLine,
+    pub line_text: String,
+    pub verdict: Verdict,
+    pub example: Option<String>,
+}
+
+impl Finding {
+    pub fn new(rule: &Rule, path: &str, hunk: &Hunk, verdict: Verdict) -> Option<Self> {
+        let (line, text) = anchor(rule, hunk)?;
+        Some(Self {
+            rule: rule.id.clone(),
+            severity: rule.severity,
+            path: path.to_owned(),
+            line,
+            line_text: text.to_owned(),
+            verdict,
+            example: rule.examples.first().cloned(),
+        })
+    }
+
+    /// Stable across pushes that only move the line: rule, path and the
+    /// line's trimmed text.
+    pub fn key(&self) -> String {
+        let input = format!("{}\0{}\0{}", self.rule, self.path, self.line_text.trim());
+        format!("{:016x}", fnv1a(input.as_bytes()))
+    }
+
+    pub fn body(&self) -> String {
+        let source = self
+            .example
+            .as_deref()
+            .map(|u| format!(" Learned from [an earlier review]({u})."))
+            .unwrap_or_default();
+        format!(
+            "{}\n\n<sub>dify-review · `{}`{}{} Reply here if this is wrong.</sub>\n{}:rule={};key={} -->",
+            self.verdict.comment,
+            self.rule,
+            self.verdict
+                .option
+                .as_ref()
+                .map(|o| format!(" ({o})"))
+                .unwrap_or_default(),
+            source,
+            MARKER,
+            self.rule,
+            self.key(),
+        )
+    }
+}
+
+/// The dedupe keys in a comment body dify-review posted earlier.
+pub fn marker_keys(body: &str) -> Vec<String> {
+    body.match_indices(MARKER)
+        .filter_map(|(i, _)| {
+            let rest = &body[i + MARKER.len()..];
+            let end = rest.find("-->")?;
+            rest[..end]
+                .split(';')
+                .find_map(|kv| kv.trim().strip_prefix("key="))
+                .map(|k| k.trim().to_owned())
+        })
+        .collect()
+}
+
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, b| {
+        (h ^ u64::from(*b)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::diff::parse_patch;
+    use crate::rules::parse_rule;
+    use crate::rules::tests::{CHOICE, NOUL};
+
+    fn setup() -> (Vec<Rule>, Hunk) {
+        let rules = vec![
+            parse_rule("no-type-ignore", NOUL).unwrap(),
+            parse_rule("doubles", CHOICE).unwrap(),
+        ];
+        let hunk = parse_patch("@@ -1,2 +1,3 @@\n a = 1\n+b = 2\n+c = f()  # type: ignore\n d")
+            .unwrap()
+            .remove(0);
+        (rules, hunk)
+    }
+
+    #[test]
+    fn noul_threshold_and_shape() {
+        let (rules, _) = setup();
+        assert!(decide(&rules[0], &Answer::Noul(0.92)).is_some());
+        assert!(decide(&rules[0], &Answer::Noul(0.5)).is_none());
+        let wrong = Answer::Choice {
+            choice: OptionName("real".into()),
+            confidence: 0.99,
+        };
+        assert!(decide(&rules[0], &wrong).is_none());
+    }
+
+    #[test]
+    fn choice_comments_only_for_commenting_options() {
+        let (rules, _) = setup();
+        let pick = |name: &str, c| Answer::Choice {
+            choice: OptionName(name.into()),
+            confidence: c,
+        };
+        let v = decide(&rules[1], &pick("real", 0.9)).unwrap();
+        assert_eq!(v.option, Some(OptionName("real".into())));
+        assert_eq!(v.comment, "Use the real class.");
+        assert!(decide(&rules[1], &pick("none", 0.99)).is_none());
+        assert!(decide(&rules[1], &pick("real", 0.3)).is_none());
+        assert!(decide(&rules[1], &pick("unknown", 0.99)).is_none());
+    }
+
+    #[test]
+    fn anchors_on_hint_else_first_added_line() {
+        let (rules, hunk) = setup();
+        assert_eq!(anchor(&rules[0], &hunk).unwrap().0, NewLine(3));
+        assert_eq!(anchor(&rules[1], &hunk).unwrap().0, NewLine(2));
+        assert!(decide_by_hint(&rules[0], &hunk).is_some());
+        assert!(decide_by_hint(&rules[1], &hunk).is_none());
+    }
+
+    #[test]
+    fn body_round_trips_its_key() {
+        let (rules, hunk) = setup();
+        let v = decide(&rules[0], &Answer::Noul(0.9)).unwrap();
+        let f = Finding::new(&rules[0], "api/x.py", &hunk, v).unwrap();
+        let body = f.body();
+        assert!(body.starts_with("Fix the type."));
+        assert!(body.contains("https://example.test/r1"));
+        assert_eq!(marker_keys(&body), vec![f.key()]);
+        assert!(marker_keys("no marker here").is_empty());
+    }
+}
