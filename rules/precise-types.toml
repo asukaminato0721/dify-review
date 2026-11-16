@@ -3,7 +3,7 @@ severity = 'nit'
 threshold = 0.35
 paths = ['api/**/*.py']
 gate = true
-hint = '->\s*(?:object|Any)\b|:\s*(?:object|Any)\b|\*\*?\w+\s*[,)]'
+hint = '->\s*(?:object|Any)\b|:\s*(?:object|Any)\b|\bdef\s[^#]*\*\*?\w+|^\s*\*\*?\w+\s*[:,)]'
 examples = [
   'https://github.com/langgenius/dify/pull/45766#discussion_r4505010078',
   'https://github.com/langgenius/dify/pull/45767#discussion_r4505008980',
