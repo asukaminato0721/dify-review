@@ -238,7 +238,10 @@ mod tests {
         assert_eq!(p.oversized, vec![big]);
         assert_eq!(p.chunks.len(), 1);
         assert_eq!(p.chunks[0].hunks(), [a.clone(), b.clone()]);
-        assert_eq!(p.chunks[0].render(), format!("{}\n{}", a.render(), b.render()));
+        assert_eq!(
+            p.chunks[0].render(),
+            format!("{}\n{}", a.render(), b.render())
+        );
         assert_eq!(p.chunks[0].render().len(), p.chunks[0].chars);
         // Too small for both: one chunk each.
         assert_eq!(Chunk::pack([a, b], 15).chunks.len(), 2);

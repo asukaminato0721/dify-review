@@ -30,7 +30,8 @@ pub fn counts(path: &str) -> bool {
         || name.ends_with("_test.py")
         || name.contains(".test.")
         || name.contains(".spec.");
-    let lock = name.ends_with(".lock") || name.ends_with("-lock.json") || name.ends_with("-lock.yaml");
+    let lock =
+        name.ends_with(".lock") || name.ends_with("-lock.json") || name.ends_with("-lock.yaml");
     let snapshot = path.contains("snapshots");
     !(test || lock || snapshot)
 }
@@ -61,9 +62,13 @@ mod tests {
 
     #[test]
     fn leaves_out_tests_locks_and_snapshots() {
-        assert!(counts("api/core/rag/index_processor/index_processor_base.py"));
+        assert!(counts(
+            "api/core/rag/index_processor/index_processor_base.py"
+        ));
         assert!(counts("web/app/components/base/button.tsx"));
-        assert!(!counts("api/tests/unit_tests/core/test_provider_manager.py"));
+        assert!(!counts(
+            "api/tests/unit_tests/core/test_provider_manager.py"
+        ));
         assert!(!counts("api/core/test_utils.py"));
         assert!(!counts("web/app/__tests__/button.tsx"));
         assert!(!counts("web/app/button.spec.tsx"));

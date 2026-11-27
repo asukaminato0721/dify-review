@@ -9,11 +9,11 @@ use anyhow::Result;
 use dify_review_core::Repo;
 use dify_review_core::diff::Chunk;
 use dify_review_core::review::{
-    Finding, SplitAsk, SplitFacts, SummaryFacts, Verdict, decide_at, decide_by_hint,
-    flags_problem, is_split_notice, posting_threshold, split_body, summary_body,
+    Finding, SplitAsk, SplitFacts, SummaryFacts, Verdict, decide_at, decide_by_hint, flags_problem,
+    is_split_notice, posting_threshold, split_body, summary_body,
 };
-use dify_review_core::size::{REQUIRE_SPLIT, ReviewLines, SUGGEST_SPLIT, SizeTier};
 use dify_review_core::rules::{Rule, RuleId, RuleSet};
+use dify_review_core::size::{REQUIRE_SPLIT, ReviewLines, SUGGEST_SPLIT, SizeTier};
 use dify_review_github::GitHub;
 use dify_review_github::pr::{self, InlineComment, PullRequest, ReviewEvent};
 use dify_review_jev::{Jev, MAX_PATCH_CHARS, Usage, chunk_state};
@@ -261,7 +261,11 @@ impl Reviewer {
                 for r in &stale {
                     pr::minimize(&self.gh, &r.node_id).await?;
                 }
-                eprintln!("PR #{}: folded {} earlier notice(s)", pr.number, stale.len());
+                eprintln!(
+                    "PR #{}: folded {} earlier notice(s)",
+                    pr.number,
+                    stale.len()
+                );
                 // A split request folded because the size is fine no longer
                 // stands in the way either.
                 let lifted: Vec<u64> = stale
@@ -274,7 +278,11 @@ impl Reviewer {
                     false => {
                         let msg = "Small enough to review: the split request no longer applies.";
                         pr::dismiss_ids(&self.gh, &self.repo, pr.number, &lifted, msg).await?;
-                        eprintln!("PR #{}: dismissed {} split request(s)", pr.number, lifted.len());
+                        eprintln!(
+                            "PR #{}: dismissed {} split request(s)",
+                            pr.number,
+                            lifted.len()
+                        );
                         Ok(())
                     }
                 }
@@ -314,8 +322,13 @@ impl Reviewer {
                     requester: None,
                     trigger: None,
                 };
-                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::RequestChanges)
-                    .await?;
+                self.post(
+                    pr,
+                    &self.summary(pr, &facts),
+                    &[],
+                    ReviewEvent::RequestChanges,
+                )
+                .await?;
                 self.label(pr, pr::WAITING_FOR_AUTHOR).await
             }
             // Nothing new: keep the status label in step with the pull request.
@@ -362,7 +375,8 @@ impl Reviewer {
                         requester: None,
                         trigger: None,
                     };
-                    self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?;
+                    self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment)
+                        .await?;
                     if self.opts.post {
                         let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
                         pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
@@ -503,12 +517,18 @@ impl Reviewer {
         let clear = still_open == 0;
         match (act_on, ask.is_some(), clear && !standing.is_empty()) {
             (true, _, _) => {
-                self.post(pr, &self.summary(pr, &facts), &comments, ReviewEvent::RequestChanges)
-                    .await?
+                self.post(
+                    pr,
+                    &self.summary(pr, &facts),
+                    &comments,
+                    ReviewEvent::RequestChanges,
+                )
+                .await?
             }
             // Everything was dealt with: say so, and lift the earlier change request.
             (false, _, true) => {
-                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?;
+                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment)
+                    .await?;
                 if self.opts.post {
                     let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
                     match pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
@@ -523,7 +543,10 @@ impl Reviewer {
                     }
                 }
             }
-            (false, true, false) => self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?,
+            (false, true, false) => {
+                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment)
+                    .await?
+            }
             (false, false, false) => eprintln!(
                 "PR #{}: nothing new to act on at {}{}; label only",
                 pr.number,
@@ -774,7 +797,10 @@ mod tests {
         let split = "x <!-- dify-review:head=a;suggest_split=a -->";
         let found = "x <!-- dify-review:head=a -->";
         // The split notice is older than the review that followed it.
-        let reviews = [review("split", split, false, false), review("found", found, true, false)];
+        let reviews = [
+            review("split", split, false, false),
+            review("found", found, true, false),
+        ];
         assert!(to_fold(&reviews, true, false).is_empty());
         let ids: Vec<&str> = to_fold(&reviews, true, true)
             .iter()

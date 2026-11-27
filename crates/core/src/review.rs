@@ -625,7 +625,10 @@ pub(crate) mod tests {
         let suggested = split_body(&facts(SplitAsk::Suggest, 150));
         assert!(suggested.starts_with("Consider splitting this into smaller pull requests"));
         assert!(suggested.contains("past about 150"));
-        assert_eq!(marker_values(&suggested, "suggest_split"), vec!["abc".to_owned()]);
+        assert_eq!(
+            marker_values(&suggested, "suggest_split"),
+            vec!["abc".to_owned()]
+        );
         assert!(marker_values(&suggested, "split").is_empty());
         for body in [&required, &suggested] {
             assert!(is_split_notice(body) && !flags_problem(body));
