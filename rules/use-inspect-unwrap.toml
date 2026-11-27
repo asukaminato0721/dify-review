@@ -1,6 +1,6 @@
 # Distilled from 6 review threads in dataset 2026-11-27 (see dataset/).
 severity = 'nit'
-threshold = 0.80
+threshold = 0.50
 paths = ['api/**/*.py']
 gate = true
 hint = '__wrapped__|\bdef\s+_?unwrap\w*\s*[\[(]'

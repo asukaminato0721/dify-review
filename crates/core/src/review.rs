@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::diff::{Chunk, LineKind, NewLine};
 use crate::rules::{HintScope, Judge, OptionName, Rule, RuleId, Severity};
+use crate::size::ReviewLines;
 use crate::{MARKER, Repo};
 
 /// Jev's answer to one rule's question.
@@ -275,31 +276,70 @@ pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
     )
 }
 
-/// Asking the author to split a pull request too large to review well.
+/// Asking the author to split a pull request, by how far over it is.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SplitFacts<'a> {
     pub head: &'a str,
-    pub lines: u64,
-    pub files: u64,
-    /// The most changed lines a pull request may have to be reviewed.
-    pub limit: u64,
+    pub lines: ReviewLines,
+    /// The threshold it is over: `suggest` or `require`, as `tier` says.
+    pub limit: ReviewLines,
+    pub tier: SplitAsk,
 }
 
-/// The split request: one per pull request, recorded by `split=<head>`.
+/// The two split notices, each sent at most once per pull request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitAsk {
+    /// Over the rule of thumb: still reviewed. Marker `suggest_split=<head>`.
+    Suggest,
+    /// Too large: not judged until it is split. Marker `split=<head>`.
+    Require,
+}
+
+impl SplitAsk {
+    pub fn marker(self) -> &'static str {
+        match self {
+            SplitAsk::Suggest => "suggest_split",
+            SplitAsk::Require => "split",
+        }
+    }
+}
+
+/// The split notice; its wording follows pyrefly's CONTRIBUTING.
 pub fn split_body(f: &SplitFacts<'_>) -> String {
-    let marker = summary_marker(f.head, None).replacen(" -->", &format!(";split={} -->", f.head), 1);
-    format!(
-        "This pull request changes {} lines in {} files, more than the {} lines a reviewer can follow in one pass. \
-         Please split it into smaller pull requests, one concern each (for example by module or by kind of change), \
-         and they will be reviewed as they come.{SUMMARY_FOOTER}{marker}",
-        f.lines, f.files, f.limit
-    )
+    let marker = summary_marker(f.head, None).replacen(
+        " -->",
+        &format!(";{}={} -->", f.tier.marker(), f.head),
+        1,
+    );
+    let how = "Split it by feature: each pull request carries one functional change together with its tests, \
+               so each feature stands on its own and can be reviewed, merged and reverted independently.";
+    let counted = "Size counts added non-test lines; tests, lock files and snapshots do not count.";
+    let text = match f.tier {
+        SplitAsk::Suggest => format!(
+            "Consider splitting this into smaller pull requests: it adds {} lines of non-test code, past about {}. \
+             {how} A rule of thumb, not a requirement. {counted}",
+            f.lines, f.limit
+        ),
+        SplitAsk::Require => format!(
+            "Please split this into smaller pull requests: it adds {} lines of non-test code, more than {}. \
+             {how} It will be reviewed once it is under {}. {counted}",
+            f.lines, f.limit, f.limit
+        ),
+    };
+    format!("{text}{SUMMARY_FOOTER}{marker}")
 }
 
-/// A bot summary that points at something wrong with the pull request as a
-/// whole (conflict, failing CI, too large): stale once that is gone.
+/// A split notice, of either kind.
+pub fn is_split_notice(body: &str) -> bool {
+    [SplitAsk::Suggest, SplitAsk::Require]
+        .iter()
+        .any(|a| !marker_values(body, a.marker()).is_empty())
+}
+
+/// A bot summary that flags a merge conflict or failing CI: stale once
+/// that is gone.
 pub fn flags_problem(body: &str) -> bool {
-    ["conflict", "ci", "split"]
+    ["conflict", "ci"]
         .iter()
         .any(|f| !marker_values(body, f).is_empty())
 }
@@ -308,8 +348,8 @@ pub fn flags_problem(body: &str) -> bool {
 /// write it now. None when it is current or is not a dify-review summary.
 pub fn refreshed_summary(body: &str, repo: &Repo, pr: u64) -> Option<String> {
     let head = marker_values(body, "head").into_iter().next()?;
-    // A split request has its own text; summary_body would rewrite it away.
-    marker_values(body, "split").is_empty().then_some(())?;
+    // A split notice has its own text; summary_body would rewrite it away.
+    (!is_split_notice(body)).then_some(())?;
     let trigger = marker_values(body, "trigger")
         .into_iter()
         .next()
@@ -567,20 +607,31 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn split_request_is_marked_and_left_alone_by_refresh() {
+    fn split_notices_are_marked_and_left_alone_by_refresh() {
         let repo: Repo = "o/r".parse().unwrap();
-        let body = split_body(&SplitFacts {
+        let facts = |tier, limit| SplitFacts {
             head: "abc",
-            lines: 3624,
-            files: 13,
-            limit: 1500,
-        });
-        assert!(body.starts_with("This pull request changes 3624 lines in 13 files"));
-        assert_eq!(marker_values(&body, "split"), vec!["abc".to_owned()]);
-        assert_eq!(marker_values(&body, "head"), vec!["abc".to_owned()]);
-        assert!(flags_problem(&body));
-        assert_eq!(refreshed_summary(&body, &repo, 1), None);
-        assert!(!flags_problem(&summary_marker("abc", None)));
+            lines: ReviewLines(555),
+            limit: ReviewLines(limit),
+            tier,
+        };
+        let required = split_body(&facts(SplitAsk::Require, 300));
+        assert!(required.starts_with(
+            "Please split this into smaller pull requests: it adds 555 lines of non-test code, more than 300."
+        ));
+        assert!(required.contains("one functional change together with its tests"));
+        assert_eq!(marker_values(&required, "split"), vec!["abc".to_owned()]);
+        assert_eq!(marker_values(&required, "head"), vec!["abc".to_owned()]);
+        let suggested = split_body(&facts(SplitAsk::Suggest, 150));
+        assert!(suggested.starts_with("Consider splitting this into smaller pull requests"));
+        assert!(suggested.contains("past about 150"));
+        assert_eq!(marker_values(&suggested, "suggest_split"), vec!["abc".to_owned()]);
+        assert!(marker_values(&suggested, "split").is_empty());
+        for body in [&required, &suggested] {
+            assert!(is_split_notice(body) && !flags_problem(body));
+            assert_eq!(refreshed_summary(body, &repo, 1), None);
+        }
+        assert!(!is_split_notice(&summary_marker("abc", None)));
     }
 
     #[test]

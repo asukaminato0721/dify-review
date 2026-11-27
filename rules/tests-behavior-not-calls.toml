@@ -1,5 +1,6 @@
 # Added by hand (asukaminato0721, 2026-11-16): not distilled from threads yet.
 severity = 'should'
+threshold = 0.35
 paths = ['api/tests/**/*.py', 'api/providers/**/tests/**/*.py']
 gate = true
 hint = '\.assert_(?:called|not_called|any_call|has_calls)\w*\(|\.call_count\b|\.call_args(?:_list)?\b|\.mock_calls\b'

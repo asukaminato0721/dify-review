@@ -114,6 +114,7 @@ pub async fn run(a: BacktestArgs) -> Result<()> {
     );
 
     let mut cache = load_cache(&a.cache)?;
+    let positives = merge_same_chunk(positives);
     let pending: Vec<Pending> = positives.into_iter().chain(negatives).collect();
     let (samples, asked, tokens) =
         judge_all(&jev, &rules, pending, &mut cache, &a.cache, a.concurrency).await?;
@@ -350,6 +351,39 @@ fn commented_chunk(t: &ReviewThread, hunks: Vec<Hunk>) -> Option<Chunk> {
         .chunks
         .into_iter()
         .find(|c| c.hunks().iter().any(commented))
+}
+
+/// One sample per chunk: comments left on the same file at the same commit
+/// share one chunk, which Jev judges in one decision. Counting it once per
+/// comment would weigh it several times, and its cached answer (one per
+/// request) would stand in for answers that differed. Labels and rejections
+/// are merged; the first comment's URL names it.
+fn merge_same_chunk(positives: Vec<Pending>) -> Vec<Pending> {
+    let mut merged: Vec<Pending> = Vec::new();
+    let mut index: HashMap<(String, String, String), usize> = HashMap::new();
+    positives.into_iter().for_each(|p| {
+        let key = (p.title.clone(), p.path.clone(), p.chunk.render());
+        match index.get(&key) {
+            Some(&i) => {
+                let m = &mut merged[i];
+                p.labels.into_iter().for_each(|l| {
+                    if !m.labels.contains(&l) {
+                        m.labels.push(l);
+                    }
+                });
+                p.rejected.into_iter().for_each(|r| {
+                    if !m.rejected.contains(&r) {
+                        m.rejected.push(r);
+                    }
+                });
+            }
+            None => {
+                index.insert(key, merged.len());
+                merged.push(p);
+            }
+        }
+    });
+    merged
 }
 
 /// One fetched file diff; `patch: None` records that it could not be

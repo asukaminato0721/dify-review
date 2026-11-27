@@ -3,7 +3,7 @@
 # session factory, not only controllers and services, and not only db.session.
 gate = true
 severity = 'should'
-threshold = 0.45
+threshold = 0.75
 paths = ['api/clients/**/*.py', 'api/commands/**/*.py', 'api/controllers/**/*.py', 'api/core/**/*.py', 'api/domain/**/*.py', 'api/enterprise/**/*.py', 'api/events/**/*.py', 'api/extensions/**/*.py', 'api/factories/**/*.py', 'api/fields/**/*.py', 'api/libs/**/*.py', 'api/machinery/**/*.py', 'api/models/**/*.py', 'api/repositories/**/*.py', 'api/schedule/**/*.py', 'api/services/**/*.py', 'api/tasks/**/*.py']
 hint = 'session\s+or\s+db\.session|session:\s*[\w\[\]. ]+\|\s*None\s*=\s*None|\bdb\.session\b|session_factory\.create_session\(|Session\(db\.engine'
 propose_guard = true

@@ -7,7 +7,8 @@ use anyhow::{Context, Result};
 use dify_review_core::MARKER;
 use dify_review_core::Repo;
 use dify_review_core::diff::{Hunk, NewLine, parse_patch};
-use dify_review_core::review::{marker_keys, marker_values, mentions};
+use dify_review_core::review::{SplitAsk, marker_keys, marker_values, mentions};
+use dify_review_core::size::{self, ReviewLines};
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -33,22 +34,6 @@ pub struct PullRequest {
     /// (None) while GitHub is still computing it.
     pub mergeable_state: Option<String>,
     pub labels: Vec<String>,
-    pub size: PrSize,
-}
-
-/// How much a pull request changes, as GitHub counts it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PrSize {
-    pub additions: u64,
-    pub deletions: u64,
-    pub files: u64,
-}
-
-impl PrSize {
-    /// Lines a reviewer has to read: added plus removed.
-    pub fn lines(&self) -> u64 {
-        self.additions + self.deletions
-    }
 }
 
 impl PullRequest {
@@ -78,12 +63,6 @@ struct RawPr {
     mergeable_state: Option<String>,
     #[serde(default)]
     labels: Vec<RawLabel>,
-    #[serde(default)]
-    additions: u64,
-    #[serde(default)]
-    deletions: u64,
-    #[serde(default)]
-    changed_files: u64,
 }
 
 #[derive(Deserialize)]
@@ -109,6 +88,8 @@ struct RawFile {
     /// Absent for binary files and for patches GitHub considers too large.
     #[serde(default)]
     patch: Option<String>,
+    #[serde(default)]
+    additions: u64,
 }
 
 #[derive(Deserialize)]
@@ -128,11 +109,6 @@ pub async fn pull_request(gh: &GitHub, repo: &Repo, number: u64) -> Result<PullR
         draft: pr.draft,
         mergeable_state: pr.mergeable_state,
         labels: pr.labels.into_iter().map(|l| l.name).collect(),
-        size: PrSize {
-            additions: pr.additions,
-            deletions: pr.deletions,
-            files: pr.changed_files,
-        },
     })
 }
 
@@ -194,6 +170,21 @@ fn reviewable(files: Vec<RawFile>) -> Result<Vec<ChangedFile>> {
             Ok(ChangedFile { path, hunks })
         })
         .collect()
+}
+
+/// The pull request's size as pyrefly counts it: added lines in the files
+/// that count (no tests, lock files or snapshots), removed files left out.
+pub async fn review_lines(gh: &GitHub, repo: &Repo, number: u64) -> Result<ReviewLines> {
+    let files: Vec<RawFile> = gh
+        .get_all(&format!("/repos/{repo}/pulls/{number}/files"))
+        .await?;
+    Ok(ReviewLines(
+        files
+            .iter()
+            .filter(|f| f.status != "removed" && size::counts(&f.filename))
+            .map(|f| f.additions)
+            .sum(),
+    ))
 }
 
 /// Dedupe keys of every inline comment dify-review already left on the PR.
@@ -277,8 +268,9 @@ pub struct History {
     pub conflicts: HashSet<String>,
     /// Heads whose failing CI was already pointed out.
     pub ci: HashSet<String>,
-    /// Heads at which the author was asked to split the pull request.
+    /// Heads at which the author was asked to split, per kind of ask.
     pub splits: HashSet<String>,
+    pub split_suggestions: HashSet<String>,
 }
 
 pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
@@ -303,7 +295,11 @@ pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
         ci: bodies.iter().flat_map(|b| marker_values(b, "ci")).collect(),
         splits: bodies
             .iter()
-            .flat_map(|b| marker_values(b, "split"))
+            .flat_map(|b| marker_values(b, SplitAsk::Require.marker()))
+            .collect(),
+        split_suggestions: bodies
+            .iter()
+            .flat_map(|b| marker_values(b, SplitAsk::Suggest.marker()))
             .collect(),
     })
 }
@@ -698,6 +694,10 @@ pub async fn resolve_thread(gh: &GitHub, thread_id: &str) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct BotReview {
     pub node_id: String,
+    /// The REST id, which dismissal takes.
+    pub id: u64,
+    /// It still requests changes (not dismissed, not superseded).
+    pub requests_changes: bool,
     pub body: String,
     /// It left inline suggestions: never folded, they are what to act on.
     pub has_inline: bool,
@@ -710,7 +710,7 @@ query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       reviews(last: 100) {
-        nodes { id body isMinimized comments { totalCount } }
+        nodes { id databaseId state body isMinimized comments { totalCount } }
       }
     }
   }
@@ -740,6 +740,8 @@ struct Nodes<T> {
 #[serde(rename_all = "camelCase")]
 struct RawBotReview {
     id: String,
+    database_id: u64,
+    state: String,
     #[serde(default)]
     body: String,
     is_minimized: bool,
@@ -776,6 +778,8 @@ pub async fn bot_reviews(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<Bo
         .filter(|r| !marker_values(&r.body, "head").is_empty())
         .map(|r| BotReview {
             node_id: r.id,
+            id: r.database_id,
+            requests_changes: r.state == "CHANGES_REQUESTED",
             body: r.body,
             has_inline: r.comments.total_count > 0,
             minimized: r.is_minimized,
@@ -820,10 +824,22 @@ pub async fn dismiss_reviews(
     reviews: &[ReviewSummary],
     message: &str,
 ) -> Result<()> {
-    for r in reviews {
+    let ids: Vec<u64> = reviews.iter().map(|r| r.id).collect();
+    dismiss_ids(gh, repo, number, &ids, message).await
+}
+
+/// Dismiss change requests by REST id.
+pub async fn dismiss_ids(
+    gh: &GitHub,
+    repo: &Repo,
+    number: u64,
+    ids: &[u64],
+    message: &str,
+) -> Result<()> {
+    for id in ids {
         let _: serde_json::Value = gh
             .put(
-                &format!("/repos/{repo}/pulls/{number}/reviews/{}/dismissals", r.id),
+                &format!("/repos/{repo}/pulls/{number}/reviews/{id}/dismissals"),
                 &json!({ "message": message, "event": "DISMISS" }),
             )
             .await?;

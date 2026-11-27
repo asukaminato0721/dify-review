@@ -127,10 +127,14 @@ schedule, with `--since` a little longer than the interval:
   to flag and dismisses that request. Before reviewing a new head, the bot
   resolves its own comments the push made outdated. On the author's own
   pull request GitHub allows no change request, so it comments instead.
-  A pull request over `--max-pr-lines` changed lines (added plus removed,
-  default 1500) is not judged: its author is asked, once, to split it into
-  smaller pull requests, and later heads only get the cheap checks until it
-  is small enough or someone mentions the bot.
+  Size is counted as pyrefly does (its CONTRIBUTING and size labeler):
+  added lines of non-test code, tests, lock files and snapshots left out.
+  Over `--suggest-split` (150, pyrefly's rule of thumb) the author is asked
+  once to consider splitting, as a comment; the review goes on. Over
+  `--require-split` (300, pyrefly's `size/xl`) the author is asked once to
+  split, with a change request, and the pull request is not judged until it
+  is under (or someone mentions the bot). Once it is small enough the split
+  request is folded and dismissed.
   At most one bot notice (a summary without inline suggestions: conflict,
   CI, split, nothing left) stays in view: each pass folds the earlier ones
   as outdated, and the newest too once what it flags is gone. Folded, not

@@ -7,5 +7,6 @@ pub mod model;
 pub mod review;
 pub mod rules;
 pub mod since;
+pub mod size;
 
 pub use model::*;
