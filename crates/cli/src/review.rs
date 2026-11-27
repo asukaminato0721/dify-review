@@ -152,11 +152,11 @@ impl Reviewer {
                     }
                     (SizeTier::SuggestSplit, _, _) => {
                         self.suggest_split(&pr, &history, lines).await?;
-                        self.judge_or_recheck(&pr, ask, &history, seen && !asked, &failing)
+                        self.judge_or_recheck(&pr, ask, &history, seen && !asked, &failing, tier)
                             .await?
                     }
                     _ => {
-                        self.judge_or_recheck(&pr, ask, &history, seen && !asked, &failing)
+                        self.judge_or_recheck(&pr, ask, &history, seen && !asked, &failing, tier)
                             .await?
                     }
                 }
@@ -173,10 +173,11 @@ impl Reviewer {
         history: &pr::History,
         judged: bool,
         failing: &[pr::FailingCheck],
+        tier: SizeTier,
     ) -> Result<()> {
         match judged {
-            true => self.recheck(pr, history, failing).await,
-            false => self.judge_and_post(pr, ask, failing).await,
+            true => self.recheck(pr, history, failing, tier).await,
+            false => self.judge_and_post(pr, ask, failing, tier).await,
         }
     }
 
@@ -207,7 +208,10 @@ impl Reviewer {
                     .await?;
                 self.label(pr, pr::WAITING_FOR_AUTHOR).await
             }
-            (false, true) => self.recheck(pr, history, failing).await,
+            (false, true) => {
+                self.recheck(pr, history, failing, SizeTier::RequireSplit)
+                    .await
+            }
             (false, false) => {
                 eprintln!(
                     "PR #{}: still {lines} added non-test lines, split already asked; label only",
@@ -298,6 +302,7 @@ impl Reviewer {
         pr: &PullRequest,
         history: &pr::History,
         failing: &[pr::FailingCheck],
+        tier: SizeTier,
     ) -> Result<()> {
         let head = &pr.head.0;
         let new_conflict = pr.conflicted() && !history.conflicts.contains(head);
@@ -332,7 +337,7 @@ impl Reviewer {
                 self.label(pr, pr::WAITING_FOR_AUTHOR).await
             }
             // Nothing new: keep the status label in step with the pull request.
-            false => self.restatus(pr, failing).await,
+            false => self.restatus(pr, failing, tier).await,
         }
     }
 
@@ -340,13 +345,22 @@ impl Reviewer {
     /// thread is unresolved, it conflicts, or CI fails; else the reviewer's.
     /// When it turns to the reviewer and the bot still requests changes,
     /// say nothing is left and lift that request.
-    async fn restatus(&self, pr: &PullRequest, failing: &[pr::FailingCheck]) -> Result<()> {
+    async fn restatus(
+        &self,
+        pr: &PullRequest,
+        failing: &[pr::FailingCheck],
+        tier: SizeTier,
+    ) -> Result<()> {
         let threads = pr::review_threads(&self.gh, &self.repo, pr.number).await?;
         let unresolved = threads
             .iter()
             .filter(|t| !t.resolved && !(t.bot && t.outdated))
             .count();
-        let author_turn = unresolved > 0 || pr.conflicted() || !failing.is_empty();
+        // Too large stays the author's turn: the split request stands.
+        let author_turn = unresolved > 0
+            || pr.conflicted()
+            || !failing.is_empty()
+            || tier == SizeTier::RequireSplit;
         let status = match author_turn {
             true => pr::WAITING_FOR_AUTHOR,
             false => pr::WAITING_FOR_REVIEWER,
@@ -399,6 +413,7 @@ impl Reviewer {
         pr: &PullRequest,
         ask: Option<Ask<'_>>,
         failing: &[pr::FailingCheck],
+        tier: SizeTier,
     ) -> Result<()> {
         let threads = pr::review_threads(&self.gh, &self.repo, pr.number).await?;
         let outdated: Vec<_> = threads
@@ -510,7 +525,9 @@ impl Reviewer {
         // failing CI. Unresolved threads alone are already visible on the pull
         // request. An explicit ask always gets an answer.
         let act_on = facts.new > 0 || conflict || ci.is_some();
-        let standing = match act_on {
+        // Judged on request while too large: the split request still stands.
+        let too_large = tier == SizeTier::RequireSplit;
+        let standing = match act_on || too_large {
             true => Vec::new(),
             false => pr::bot_change_requests(&self.gh, &self.repo, pr.number).await?,
         };
@@ -558,7 +575,7 @@ impl Reviewer {
             ),
         }
         // Whose turn it is; the label's time also records that this head was judged.
-        let status = match act_on || !clear {
+        let status = match act_on || !clear || too_large {
             true => pr::WAITING_FOR_AUTHOR,
             false => pr::WAITING_FOR_REVIEWER,
         };
