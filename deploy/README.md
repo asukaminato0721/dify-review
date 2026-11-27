@@ -35,17 +35,23 @@ systemctl --user disable --now dify-review-watch.timer   # stop
 Comments are posted with your own GitHub token until the dify-codereview
 App is installed.
 
-## Weekly feedback and calibration
+## Weekly dataset update
 
 ```sh
 systemctl --user link "$PWD/deploy/systemd/dify-review-calibrate.service" "$PWD/deploy/systemd/dify-review-calibrate.timer"
 systemctl --user enable --now dify-review-calibrate.timer
+journalctl --user -u dify-review-calibrate      # the run's summary
 ```
 
-Every Monday: `collect --append` (new review history), `feedback` (verdicts
-on the bot's own comments, into `backtest/feedback.toml`), `backtest` (into
-`backtest/report.md`). Nothing is applied: look at `git diff backtest/`,
-then run `dify-review backtest --apply` and commit.
+Every Monday at 09:00, Claude Code runs the `update-dataset` skill
+(`.claude/skills/update-dataset/`) unattended: `collect --append`,
+`feedback`, labelling the reviewer's new comments, `backtest`, and a
+snapshot in `dataset/<date>.md`. Its permissions are only those in
+`deploy/claude-update-dataset.json`: the commands it needs, edits under
+`dataset/`, `rules/` and `backtest/labels.toml`, no git and no `--apply`.
+Read the snapshot and `git diff`, then `dify-review backtest --apply` and
+commit. Interactively, `/update-dataset` in Claude Code does the same and
+asks before applying.
 
 A 👎 on a bot comment, or a reply saying it does not apply, marks it wrong;
 👍, resolving the thread or changing the commented lines marks it right.

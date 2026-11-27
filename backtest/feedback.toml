@@ -3,54 +3,2873 @@
 # `wrong` as an explicit negative. Do not edit: rerun it.
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578947"
+comment = "https://github.com/langgenius/dify/pull/41017#discussion_r4585589579"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/41017#discussion_r4585589592"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/41017#discussion_r4585589610"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/42774#discussion_r4585588408"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/42774#discussion_r4585588425"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/42774#discussion_r4585588444"
 rule = "tests-real-dependencies"
 option = "inject-dependency"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578961"
+comment = "https://github.com/langgenius/dify/pull/42774#discussion_r4585588463"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/42774#discussion_r4585588476"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43713#discussion_r4585323821"
 rule = "precise-types"
-option = "paramspec"
-outcome = "pending"
-reason = "pull request still open"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578973"
+comment = "https://github.com/langgenius/dify/pull/43713#discussion_r4585323829"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4585323142"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4585890856"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4585890870"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4585890884"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4586206059"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/43999#discussion_r4586206075"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44058#discussion_r4585322513"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44058#discussion_r4585322521"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44058#discussion_r4585322532"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "wrong"
+reason = "reply disagrees (0.92)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44170#discussion_r4585321830"
 rule = "parse-dont-validate"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863272"
+comment = "https://github.com/langgenius/dify/pull/44170#discussion_r4585321844"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44170#discussion_r4585321857"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44170#discussion_r4585321869"
 rule = "parse-dont-validate"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863295"
+comment = "https://github.com/langgenius/dify/pull/44456#discussion_r4585321111"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44456#discussion_r4585321119"
 rule = "parse-dont-validate"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863313"
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4585320574"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4585320593"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245057"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245076"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245092"
+rule = "unrelated-change"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245104"
+rule = "no-reflection"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245125"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245140"
+rule = "unrelated-change"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245153"
+rule = "no-reflection"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245164"
+rule = "no-test-for-type-errors"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245179"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245194"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245213"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245229"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245247"
+rule = "no-test-for-type-errors"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245273"
+rule = "no-bypass-init"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44567#discussion_r4611245290"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44842#discussion_r4584184866"
 rule = "precise-types"
 option = "concrete-type"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4583862409"
+comment = "https://github.com/langgenius/dify/pull/44842#discussion_r4584184882"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44842#discussion_r4584184894"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44842#discussion_r4584184899"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44842#discussion_r4584184910"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44843#discussion_r4584183889"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44843#discussion_r4584183897"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/44896#discussion_r4584182921"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45000#discussion_r4585585608"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45466#discussion_r4584888085"
+rule = "no-type-ignore"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45466#discussion_r4584888103"
+rule = "no-type-ignore"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45587#discussion_r4604359121"
+rule = "tests-real-dependencies"
+option = "use-sqlite-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45587#discussion_r4604359143"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45613#discussion_r4585319670"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4585319053"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4585319060"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4585819403"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4585819413"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4585819429"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4586201583"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4586201602"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4586201617"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4595847770"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4595847782"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4596263350"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4596263374"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4596370351"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4596476398"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4609999161"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4610222494"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4610337299"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45631#discussion_r4610612392"
+rule = "precise-types"
+option = "paramspec"
+outcome = "wrong"
+reason = "reply disagrees (0.91)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45775#discussion_r4585318389"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45778#discussion_r4585317662"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45778#discussion_r4585317680"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45778#discussion_r4585317690"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45821#discussion_r4584887359"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45821#discussion_r4584887380"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45821#discussion_r4586055716"
+rule = "precise-types"
+option = "paramspec"
+outcome = "wrong"
+reason = "reply disagrees (0.92)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45838#discussion_r4585316760"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45841#discussion_r4585316091"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45841#discussion_r4585316104"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45841#discussion_r4689855126"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45841#discussion_r4689855131"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45841#discussion_r4689855137"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45889#discussion_r4585315585"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4585314838"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4585314853"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4585314861"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4585314873"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4595844905"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4595844921"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4595844930"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4595844937"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596594515"
+rule = "no-test-for-type-errors"
+outcome = "wrong"
+reason = "reply disagrees (0.75)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596594522"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596594531"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596594535"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596594541"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596828301"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4596828315"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4597383601"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4597383611"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4597839789"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4597839797"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4609044961"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4609044972"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4609044981"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45896#discussion_r4609590062"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45968#discussion_r4585579275"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45968#discussion_r4585579295"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45968#discussion_r4585579307"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45968#discussion_r4585579332"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "wrong"
+reason = "reply disagrees (0.75)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45968#discussion_r4585885225"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/45970#discussion_r4585578408"
+rule = "precise-types"
+option = "paramspec"
+outcome = "wrong"
+reason = "reply disagrees (0.97)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46009#discussion_r4585314159"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46113#discussion_r4584886661"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46113#discussion_r4584886674"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46113#discussion_r4613031728"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46125#discussion_r4584885817"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46125#discussion_r4584885847"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46125#discussion_r4585122949"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46125#discussion_r4620017780"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46172#discussion_r4584180963"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "lines changed afterwards"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46184#discussion_r4584179849"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46184#discussion_r4584179856"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46184#discussion_r4584743835"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46184#discussion_r4595843371"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46184#discussion_r4609125936"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578947"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578961"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4583578973"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4584178593"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4584178609"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228284"
+rule = "inject-session"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228301"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228315"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228326"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228335"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587228350"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4587402866"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4596591245"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46187#discussion_r4708247109"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46334#discussion_r4584176230"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46334#discussion_r4584176250"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46335#discussion_r4584742794"
+rule = "no-reflection"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46335#discussion_r4584742808"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46335#discussion_r4584742823"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46335#discussion_r4585030730"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4584174022"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4584174028"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4584174035"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4584174040"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4585312043"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4585312060"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4585312079"
 rule = "precise-types"
 option = "paramspec"
 outcome = "pending"
 reason = "pull request still open"
 
 [[feedback]]
-comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4583862424"
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4585312091"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4585575650"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4597379281"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4609041814"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4609041826"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4609041863"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46341#discussion_r4609687455"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46342#discussion_r4584172696"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46342#discussion_r4692568900"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4584171389"
+rule = "precise-types"
+option = "paramspec"
+outcome = "wrong"
+reason = "reply disagrees (0.88)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4584171414"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4584171426"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4706871270"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4714486943"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46351#discussion_r4715939583"
+rule = "parse-dont-validate"
+outcome = "wrong"
+reason = "reply disagrees (0.86)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863272"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4583863295"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4584170164"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4584170173"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4585162272"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4585162293"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4586873115"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4586873134"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4588494480"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4596364230"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4609040290"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4609040301"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4609305260"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4609305272"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4626007982"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4628254335"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46353#discussion_r4652599526"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4584168863"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4584168873"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4584168886"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4585310551"
+rule = "tests-real-dependencies"
+option = "protocol-di"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4585310566"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4587580785"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4640638869"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46356#discussion_r4640638891"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4584167557"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4584167573"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4585309879"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4585309893"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4587578326"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4627584344"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4627584364"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46357#discussion_r4627584379"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4585309099"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4585309109"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4585309122"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4585309131"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4627582040"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46361#discussion_r4627582054"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4583862409"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4584163307"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4584163323"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4585570189"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4585570201"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46365#discussion_r4610751866"
 rule = "precise-types"
 option = "paramspec"
 outcome = "pending"
 reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46366#discussion_r4584161692"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46366#discussion_r4584161714"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46366#discussion_r4585456642"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46366#discussion_r4676580719"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46368#discussion_r4584160292"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46368#discussion_r4584160306"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46368#discussion_r4648377116"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46368#discussion_r4651245459"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4584158757"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4584158775"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4584158787"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4584158806"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4585567589"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4585567602"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4585567609"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4585567612"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4586188828"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4586188843"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4586188855"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46387#discussion_r4595838155"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4584155540"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4584155554"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4584155564"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4584155581"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4585028848"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4585028861"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4595837125"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4595837129"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4596704487"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4657096950"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46393#discussion_r4707420699"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46394#discussion_r4584153553"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46394#discussion_r4584153566"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46394#discussion_r4584153584"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46394#discussion_r4584153595"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46399#discussion_r4585563625"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46399#discussion_r4585563635"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46399#discussion_r4595835666"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "wrong"
+reason = "reply disagrees (0.78)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46401#discussion_r4584152277"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46401#discussion_r4584152292"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46401#discussion_r4596955158"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46401#discussion_r4596955168"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46407#discussion_r4584150582"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46407#discussion_r4584150599"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46407#discussion_r4584150615"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46407#discussion_r4707236703"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46415#discussion_r4584148912"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46415#discussion_r4584148931"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46415#discussion_r4584148945"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46415#discussion_r4584148966"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46416#discussion_r4584147201"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46416#discussion_r4585027488"
+rule = "tests-real-dependencies"
+option = "use-sqlite-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46418#discussion_r4584132383"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46418#discussion_r4584132399"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46418#discussion_r4584145302"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46418#discussion_r4584145329"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46418#discussion_r4714478097"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46419#discussion_r4584143832"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46419#discussion_r4584143850"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131248"
+rule = "no-reflection"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131266"
+rule = "no-reflection"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131282"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131295"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131307"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46420#discussion_r4584131317"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46427#discussion_r4585303424"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4584140851"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4585302440"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4585302467"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4585302482"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4587034747"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4587034761"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4588121960"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4588121973"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4595831508"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46438#discussion_r4673568255"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4584139328"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4584139342"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4584139356"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4584139370"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4585026182"
+rule = "precise-types"
+option = "paramspec"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4585026200"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4588480239"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46442#discussion_r4692550815"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "wrong"
+reason = "reply disagrees (0.85)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46446#discussion_r4585301289"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46446#discussion_r4585301299"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46446#discussion_r4585301308"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46451#discussion_r4584137085"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46451#discussion_r4584137093"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46451#discussion_r4595829551"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46451#discussion_r4609033069"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46451#discussion_r4677653041"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135239"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135251"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135269"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135278"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135290"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4584135298"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4585300238"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4585300256"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4585300276"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4585300288"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4595828653"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "wrong"
+reason = "reply disagrees (0.95)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4595828668"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4596950105"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4657715079"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4657715086"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46453#discussion_r4657715093"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4583995474"
+rule = "no-test-for-type-errors"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4583995490"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4583995502"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4583995509"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4583995514"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4584133412"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4584133425"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4584133434"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4584133443"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585449602"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585449628"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585449644"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585449657"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585555145"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585555158"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585555177"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4585555187"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4586345167"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4588116960"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4689558968"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4689843985"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46457#discussion_r4692546508"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "wrong"
+reason = "reply disagrees (0.70)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4583993443"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4583993454"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4583993468"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4583993489"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4583993509"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4584131521"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4584131549"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4584131568"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46458#discussion_r4595826166"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4583991971"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4583991996"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4583992017"
+rule = "tests-real-dependencies"
+option = "use-sqlite-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4584129572"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4584129584"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4585448414"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4692541386"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4692541399"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4693400742"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4693912237"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46459#discussion_r4694734822"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127418"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127433"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127441"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127459"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127473"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4584127489"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586513058"
+rule = "tests-behavior-not-calls"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586513080"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586513088"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586853362"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586853377"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586853392"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4586853407"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4587202920"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4587202927"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4595824982"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4595824993"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4657146585"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46460#discussion_r4707407922"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4583990443"
+rule = "no-bypass-init"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4583990454"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4583990464"
+rule = "precise-types"
+option = "explicit-params"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4583990471"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4583990480"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4584125228"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4584125245"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4584125259"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4586849407"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4586849421"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4587380082"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4587380103"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46461#discussion_r4595823955"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4583989167"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4583989183"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4583989194"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4583989211"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4583989222"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "wrong"
+reason = "reply disagrees (0.71)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4584123027"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4584123034"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4584123042"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4586510244"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4595823113"
+rule = "parse-dont-validate"
+outcome = "wrong"
+reason = "reply disagrees (0.74)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4595823128"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4609029695"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4609029706"
+rule = "parse-dont-validate"
+outcome = "wrong"
+reason = "reply disagrees (0.88)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4609485912"
+rule = "no-test-for-type-errors"
+outcome = "wrong"
+reason = "reply disagrees (0.85)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46463#discussion_r4609485929"
+rule = "parse-dont-validate"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46464#discussion_r4585297913"
+rule = "parse-dont-validate"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46483#discussion_r4583988093"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46483#discussion_r4609028654"
+rule = "parse-dont-validate"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46483#discussion_r4609115853"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46632#discussion_r4604684482"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46632#discussion_r4604684498"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46644#discussion_r4609882018"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46644#discussion_r4609882041"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46644#discussion_r4611043750"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "wrong"
+reason = "reply disagrees (0.75)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46645#discussion_r4609881060"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46646#discussion_r4609879977"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46646#discussion_r4611041753"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46646#discussion_r4627406086"
+rule = "tests-real-dependencies"
+option = "import-real-class"
+outcome = "pending"
+reason = "pull request still open"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46647#discussion_r4609878556"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46647#discussion_r4611040099"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46648#discussion_r4609877381"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46648#discussion_r4611192633"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46648#discussion_r4611355375"
+rule = "no-type-ignore"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46648#discussion_r4611355388"
+rule = "parse-dont-validate"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46648#discussion_r4611517451"
+rule = "no-type-ignore"
+outcome = "wrong"
+reason = "reply disagrees (0.83)"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46709#discussion_r4624923594"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46716#discussion_r4624921386"
+rule = "tests-real-dependencies"
+option = "use-sqlite-session"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46717#discussion_r4624920218"
+rule = "tests-behavior-not-calls"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46717#discussion_r4624920234"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "ignored"
+reason = "pull request finished, comment untouched"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46913#discussion_r4665195140"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46913#discussion_r4665195150"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46913#discussion_r4689552801"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/46983#discussion_r4669081137"
+rule = "inject-session"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/47080#discussion_r4680337925"
+rule = "tests-behavior-not-calls"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/47080#discussion_r4714471100"
+rule = "tests-real-dependencies"
+option = "inject-dependency"
+outcome = "right"
+reason = "resolved"
+
+[[feedback]]
+comment = "https://github.com/langgenius/dify/pull/47080#discussion_r4715690007"
+rule = "precise-types"
+option = "concrete-type"
+outcome = "right"
+reason = "resolved"

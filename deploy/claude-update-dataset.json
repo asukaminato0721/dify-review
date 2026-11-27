@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Skill(update-dataset)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(./target/release/dify-review collect *)",
+      "Bash(./target/release/dify-review feedback *)",
+      "Bash(./target/release/dify-review backtest)",
+      "Bash(python3 -I scripts/dataset_candidates.py *)",
+      "Bash(python3 -I scripts/dataset_stats.py *)",
+      "Bash(python3 -I scripts/check_hint.py *)",
+      "Edit(dataset/**)",
+      "Edit(backtest/labels.toml)",
+      "Edit(rules/*.toml)"
+    ],
+    "deny": [
+      "Bash(./target/release/dify-review backtest *--apply*)",
+      "Bash(git *)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}

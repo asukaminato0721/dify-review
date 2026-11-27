@@ -275,10 +275,41 @@ pub fn summary_body(repo: &Repo, pr: u64, f: &SummaryFacts<'_>) -> String {
     )
 }
 
+/// Asking the author to split a pull request too large to review well.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SplitFacts<'a> {
+    pub head: &'a str,
+    pub lines: u64,
+    pub files: u64,
+    /// The most changed lines a pull request may have to be reviewed.
+    pub limit: u64,
+}
+
+/// The split request: one per pull request, recorded by `split=<head>`.
+pub fn split_body(f: &SplitFacts<'_>) -> String {
+    let marker = summary_marker(f.head, None).replacen(" -->", &format!(";split={} -->", f.head), 1);
+    format!(
+        "This pull request changes {} lines in {} files, more than the {} lines a reviewer can follow in one pass. \
+         Please split it into smaller pull requests, one concern each (for example by module or by kind of change), \
+         and they will be reviewed as they come.{SUMMARY_FOOTER}{marker}",
+        f.lines, f.files, f.limit
+    )
+}
+
+/// A bot summary that points at something wrong with the pull request as a
+/// whole (conflict, failing CI, too large): stale once that is gone.
+pub fn flags_problem(body: &str) -> bool {
+    ["conflict", "ci", "split"]
+        .iter()
+        .any(|f| !marker_values(body, f).is_empty())
+}
+
 /// A summary posted in an earlier format, rewritten as `summary_body` would
 /// write it now. None when it is current or is not a dify-review summary.
 pub fn refreshed_summary(body: &str, repo: &Repo, pr: u64) -> Option<String> {
     let head = marker_values(body, "head").into_iter().next()?;
+    // A split request has its own text; summary_body would rewrite it away.
+    marker_values(body, "split").is_empty().then_some(())?;
     let trigger = marker_values(body, "trigger")
         .into_iter()
         .next()
@@ -533,6 +564,23 @@ pub(crate) mod tests {
         let only_open = summary_body(&repo, 7, &facts(0, 2, None, None, None));
         assert!(only_open.starts_with("Checked [`d689cee60f`]"));
         assert_eq!(refreshed_summary(&only_open, &repo, 7), None);
+    }
+
+    #[test]
+    fn split_request_is_marked_and_left_alone_by_refresh() {
+        let repo: Repo = "o/r".parse().unwrap();
+        let body = split_body(&SplitFacts {
+            head: "abc",
+            lines: 3624,
+            files: 13,
+            limit: 1500,
+        });
+        assert!(body.starts_with("This pull request changes 3624 lines in 13 files"));
+        assert_eq!(marker_values(&body, "split"), vec!["abc".to_owned()]);
+        assert_eq!(marker_values(&body, "head"), vec!["abc".to_owned()]);
+        assert!(flags_problem(&body));
+        assert_eq!(refreshed_summary(&body, &repo, 1), None);
+        assert!(!flags_problem(&summary_marker("abc", None)));
     }
 
     #[test]

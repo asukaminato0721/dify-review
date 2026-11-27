@@ -1,0 +1,17 @@
+# Distilled from 6 review threads in dataset 2026-11-27 (see dataset/).
+severity = 'nit'
+threshold = 0.80
+paths = ['api/**/*.py']
+gate = true
+hint = '__wrapped__|\bdef\s+_?unwrap\w*\s*[\[(]'
+examples = [
+  'https://github.com/langgenius/dify/pull/46362#discussion_r4571441911',
+  'https://github.com/langgenius/dify/pull/46419#discussion_r4577715803',
+  'https://github.com/langgenius/dify/pull/46391#discussion_r4585997736',
+]
+
+[noul]
+question = '''
+Does `patch` reach past a decorator by hand: walking `__wrapped__` itself, or defining its own `unwrap` helper, where `inspect.unwrap` (or the decorated function's own original) would do?'''
+comment = '''
+Please use `inspect.unwrap` (or reference the original function directly) instead of a hand-written unwrap helper or walking `__wrapped__` yourself.'''

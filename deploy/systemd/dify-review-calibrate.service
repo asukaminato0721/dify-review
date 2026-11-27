@@ -1,14 +1,15 @@
-# Weekly: add new review history, judge what became of the bot's comments,
-# and rewrite backtest/report.md. Applies nothing and commits nothing:
-# review `git diff backtest/`, then `dify-review backtest --apply` if the
-# suggested thresholds look right.
+# Weekly: refresh the dataset with the update-dataset skill, unattended.
+# Collects new review history, judges what became of the bot's comments,
+# labels the reviewer's new comments, reruns the backtest and writes
+# dataset/<date>.md. Applies no threshold and commits nothing; permissions
+# are limited to that by deploy/claude-update-dataset.json. Review the
+# snapshot and `git diff`, then `dify-review backtest --apply` and commit.
 [Unit]
-Description=dify-codereview feedback and backtest
+Description=dify-codereview weekly dataset update
 After=network-online.target
 
 [Service]
 Type=oneshot
 WorkingDirectory=%h/gitproject/dify-review
-ExecStart=%h/gitproject/dify-review/target/release/dify-review collect --since 14d --append
-ExecStart=%h/gitproject/dify-review/target/release/dify-review feedback --since 30d
-ExecStart=%h/gitproject/dify-review/target/release/dify-review backtest
+TimeoutStartSec=2h
+ExecStart=/usr/bin/claude -p "/update-dataset unattended" --settings %h/gitproject/dify-review/deploy/claude-update-dataset.json

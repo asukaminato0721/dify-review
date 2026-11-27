@@ -9,7 +9,8 @@ use anyhow::Result;
 use dify_review_core::Repo;
 use dify_review_core::diff::Chunk;
 use dify_review_core::review::{
-    Finding, SummaryFacts, Verdict, decide_at, decide_by_hint, posting_threshold, summary_body,
+    Finding, SplitFacts, SummaryFacts, Verdict, decide_at, decide_by_hint, flags_problem,
+    posting_threshold, split_body, summary_body,
 };
 use dify_review_core::rules::{Rule, RuleId, RuleSet};
 use dify_review_github::GitHub;
@@ -57,6 +58,10 @@ pub struct ReviewOpts {
     /// flagged: flaky suites. Repeatable.
     #[arg(long = "ignore-ci", default_value = "E2E")]
     ignore_ci: Vec<String>,
+    /// A pull request changing more lines (added plus removed) is not
+    /// judged: its author is asked, once, to split it.
+    #[arg(long, default_value_t = 1500)]
+    max_pr_lines: u64,
 }
 
 pub async fn run(a: ReviewArgs) -> Result<()> {
@@ -116,21 +121,90 @@ impl Reviewer {
         let seen = history.heads.contains(&pr.head.0)
             || (pr.open && pr::status_stamp(&self.gh, &self.repo, &pr).await?.judged());
         let asked = force || ask.is_some();
-        match (seen, asked) {
-            _ if !pr.open => {
+        match (pr.open, pr.draft && !asked) {
+            (false, _) => {
                 eprintln!("PR #{number}: not open, skipped");
                 Ok(())
             }
-            _ if pr.draft && !asked => {
+            (true, true) => {
                 eprintln!("PR #{number}: draft, skipped until ready for review");
                 Ok(())
             }
-            (true, false) => self.recheck(&pr, &history).await,
-            _ => {
+            (true, false) => {
                 let failing =
                     pr::failing_checks(&self.gh, &self.repo, &pr.head, &self.opts.ignore_ci)
                         .await?;
-                self.judge_and_post(&pr, ask, &failing).await
+                let oversized = pr.size.lines() > self.opts.max_pr_lines;
+                match (oversized && !asked, seen && !asked) {
+                    (true, _) => self.ask_to_split(&pr, &history, seen, &failing).await?,
+                    (false, true) => self.recheck(&pr, &history, &failing).await?,
+                    (false, false) => self.judge_and_post(&pr, ask, &failing).await?,
+                }
+                let clean = !oversized && !pr.conflicted() && failing.is_empty();
+                self.fold_notices(&pr, clean).await
+            }
+        }
+    }
+
+    /// Too large to judge well (and the costliest to ask Jev about): ask the
+    /// author once to split it. Later heads only get the cheap checks and
+    /// the status label, until it is small enough or someone asks.
+    async fn ask_to_split(
+        &self,
+        pr: &PullRequest,
+        history: &pr::History,
+        seen: bool,
+        failing: &[pr::FailingCheck],
+    ) -> Result<()> {
+        match (history.splits.is_empty(), seen) {
+            (true, _) => {
+                eprintln!(
+                    "PR #{}: {} changed lines in {} files, over {}: asking to split",
+                    pr.number,
+                    pr.size.lines(),
+                    pr.size.files,
+                    self.opts.max_pr_lines
+                );
+                let body = split_body(&SplitFacts {
+                    head: &pr.head.0,
+                    lines: pr.size.lines(),
+                    files: pr.size.files,
+                    limit: self.opts.max_pr_lines,
+                });
+                self.post(pr, &body, &[], ReviewEvent::RequestChanges)
+                    .await?;
+                self.label(pr, pr::WAITING_FOR_AUTHOR).await
+            }
+            (false, true) => self.recheck(pr, history, failing).await,
+            (false, false) => {
+                eprintln!(
+                    "PR #{}: still {} changed lines, split already asked; label only",
+                    pr.number,
+                    pr.size.lines()
+                );
+                self.label(pr, pr::WAITING_FOR_AUTHOR).await
+            }
+        }
+    }
+
+    /// Keep one bot notice in view: fold every earlier summary without
+    /// inline suggestions, and the newest too once what it flags is gone.
+    /// Folded, not deleted: the markers in them still count.
+    async fn fold_notices(&self, pr: &PullRequest, clean: bool) -> Result<()> {
+        let reviews = pr::bot_reviews(&self.gh, &self.repo, pr.number).await?;
+        let stale = to_fold(&reviews, clean);
+        match (stale.is_empty(), self.opts.post) {
+            (true, _) => Ok(()),
+            (false, false) => {
+                eprintln!("dry run: would fold {} earlier notice(s)", stale.len());
+                Ok(())
+            }
+            (false, true) => {
+                for r in &stale {
+                    pr::minimize(&self.gh, &r.node_id).await?;
+                }
+                eprintln!("PR #{}: folded {} earlier notice(s)", pr.number, stale.len());
+                Ok(())
             }
         }
     }
@@ -138,10 +212,13 @@ impl Reviewer {
     /// A head already reviewed: only the cheap checks, no Jev. Since the
     /// review, the base may have moved on (a merge conflict) or CI may have
     /// finished and failed; each is flagged once per head.
-    async fn recheck(&self, pr: &PullRequest, history: &pr::History) -> Result<()> {
+    async fn recheck(
+        &self,
+        pr: &PullRequest,
+        history: &pr::History,
+        failing: &[pr::FailingCheck],
+    ) -> Result<()> {
         let head = &pr.head.0;
-        let failing =
-            pr::failing_checks(&self.gh, &self.repo, &pr.head, &self.opts.ignore_ci).await?;
         let new_conflict = pr.conflicted() && !history.conflicts.contains(head);
         let new_ci = !failing.is_empty() && !history.ci.contains(head);
         match new_conflict || new_ci {
@@ -154,7 +231,7 @@ impl Reviewer {
                     if new_conflict { " now conflicts" } else { "" },
                     if new_ci { ", CI failing" } else { "" }
                 );
-                let ci = ci_list(&failing).filter(|_| new_ci);
+                let ci = ci_list(failing).filter(|_| new_ci);
                 let facts = SummaryFacts {
                     head,
                     new: 0,
@@ -164,12 +241,12 @@ impl Reviewer {
                     requester: None,
                     trigger: None,
                 };
-                self.post(pr, &facts, &[], ReviewEvent::RequestChanges)
+                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::RequestChanges)
                     .await?;
                 self.label(pr, pr::WAITING_FOR_AUTHOR).await
             }
             // Nothing new: keep the status label in step with the pull request.
-            false => self.restatus(pr, &failing).await,
+            false => self.restatus(pr, failing).await,
         }
     }
 
@@ -212,7 +289,7 @@ impl Reviewer {
                         requester: None,
                         trigger: None,
                     };
-                    self.post(pr, &facts, &[], ReviewEvent::Comment).await?;
+                    self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?;
                     if self.opts.post {
                         let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
                         pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
@@ -353,12 +430,12 @@ impl Reviewer {
         let clear = still_open == 0;
         match (act_on, ask.is_some(), clear && !standing.is_empty()) {
             (true, _, _) => {
-                self.post(pr, &facts, &comments, ReviewEvent::RequestChanges)
+                self.post(pr, &self.summary(pr, &facts), &comments, ReviewEvent::RequestChanges)
                     .await?
             }
             // Everything was dealt with: say so, and lift the earlier change request.
             (false, _, true) => {
-                self.post(pr, &facts, &[], ReviewEvent::Comment).await?;
+                self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?;
                 if self.opts.post {
                     let msg = format!("Nothing left to flag at {}.", short(&pr.head.0));
                     match pr::dismiss_reviews(&self.gh, &self.repo, pr.number, &standing, &msg)
@@ -373,7 +450,7 @@ impl Reviewer {
                     }
                 }
             }
-            (false, true, false) => self.post(pr, &facts, &[], ReviewEvent::Comment).await?,
+            (false, true, false) => self.post(pr, &self.summary(pr, &facts), &[], ReviewEvent::Comment).await?,
             (false, false, false) => eprintln!(
                 "PR #{}: nothing new to act on at {}{}; label only",
                 pr.number,
@@ -406,14 +483,17 @@ impl Reviewer {
         }
     }
 
+    fn summary(&self, pr: &PullRequest, facts: &SummaryFacts<'_>) -> String {
+        summary_body(&self.repo, pr.number, facts)
+    }
+
     async fn post(
         &self,
         pr: &PullRequest,
-        facts: &SummaryFacts<'_>,
+        body: &str,
         comments: &[InlineComment],
         event: ReviewEvent,
     ) -> Result<()> {
-        let body = summary_body(&self.repo, pr.number, facts);
         match self.opts.post {
             false => {
                 eprintln!(
@@ -424,12 +504,27 @@ impl Reviewer {
             }
             true => {
                 let review =
-                    pr::post_review(&self.gh, &self.repo, pr, &body, comments, event).await?;
+                    pr::post_review(&self.gh, &self.repo, pr, body, comments, event).await?;
                 eprintln!("\nposted ({event:?}): {}", review.html_url);
                 Ok(())
             }
         }
     }
+}
+
+/// Earlier bot notices to fold: every summary without inline suggestions
+/// except the newest bot review, and that one too when `clean` (nothing it
+/// could flag still holds) and it flags a problem.
+fn to_fold(reviews: &[pr::BotReview], clean: bool) -> Vec<&pr::BotReview> {
+    let newest = reviews.len().saturating_sub(1);
+    reviews
+        .iter()
+        .enumerate()
+        .filter(|(i, r)| {
+            !r.minimized && !r.has_inline && (*i != newest || (clean && flags_problem(&r.body)))
+        })
+        .map(|(_, r)| r)
+        .collect()
 }
 
 /// Failing checks as markdown links, or None when CI is not failing.
@@ -557,4 +652,42 @@ fn report(
         usage.input_tokens,
         usage.input_tokens as f64 * USD_PER_INPUT_TOKEN
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn review(id: &str, body: &str, has_inline: bool, minimized: bool) -> pr::BotReview {
+        pr::BotReview {
+            node_id: id.to_owned(),
+            body: body.to_owned(),
+            has_inline,
+            minimized,
+        }
+    }
+
+    #[test]
+    fn folds_earlier_notices_and_a_stale_newest_one() {
+        let conflict = "x <!-- dify-review:head=a;conflict=a -->";
+        let plain = "x <!-- dify-review:head=b -->";
+        let reviews = [
+            review("found", plain, true, false),
+            review("old-conflict", conflict, false, false),
+            review("folded", conflict, false, true),
+            review("newest", conflict, false, false),
+        ];
+        let ids = |clean| -> Vec<&str> {
+            to_fold(&reviews, clean)
+                .iter()
+                .map(|r| r.node_id.as_str())
+                .collect()
+        };
+        // Suggestions are never folded; the newest notice stays while it holds.
+        assert_eq!(ids(false), ["old-conflict"]);
+        assert_eq!(ids(true), ["old-conflict", "newest"]);
+        // A newest summary that flags nothing stays even when clean.
+        let quiet = [review("q", plain, false, false)];
+        assert!(to_fold(&quiet, true).is_empty());
+    }
 }

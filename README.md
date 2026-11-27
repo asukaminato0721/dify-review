@@ -19,6 +19,7 @@ arXiv:2605.30208): typed signals, thresholds calibrated on history, fail closed.
 | Backtest and calibrate thresholds | `dify-review backtest [--apply]` | done: `backtest/report.md` |
 | Watch assigned and mentioned pull requests | `dify-review watch --assignee LOGIN [--post]` | done; local timer |
 | Judge live comments, recalibrate | `dify-review feedback`, then `backtest` | done; weekly local timer |
+| Refresh the dataset (label new comments, snapshot) | `/update-dataset` (Claude Code skill) | done: `dataset/` |
 
 ## Collect
 
@@ -126,6 +127,15 @@ schedule, with `--since` a little longer than the interval:
   to flag and dismisses that request. Before reviewing a new head, the bot
   resolves its own comments the push made outdated. On the author's own
   pull request GitHub allows no change request, so it comments instead.
+  A pull request over `--max-pr-lines` changed lines (added plus removed,
+  default 1500) is not judged: its author is asked, once, to split it into
+  smaller pull requests, and later heads only get the cheap checks until it
+  is small enough or someone mentions the bot.
+  At most one bot notice (a summary without inline suggestions: conflict,
+  CI, split, nothing left) stays in view: each pass folds the earlier ones
+  as outdated, and the newest too once what it flags is gone. Folded, not
+  deleted, so the markers in them still count; reviews with suggestions are
+  never folded.
 - pull requests where an OWNER, MEMBER or COLLABORATOR mentions
   `@dify-codereview` (the handle follows Meta's `meta-codesync`): each
   mention is answered once, even on a head already reviewed, and always gets

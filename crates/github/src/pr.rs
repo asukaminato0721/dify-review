@@ -33,6 +33,22 @@ pub struct PullRequest {
     /// (None) while GitHub is still computing it.
     pub mergeable_state: Option<String>,
     pub labels: Vec<String>,
+    pub size: PrSize,
+}
+
+/// How much a pull request changes, as GitHub counts it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PrSize {
+    pub additions: u64,
+    pub deletions: u64,
+    pub files: u64,
+}
+
+impl PrSize {
+    /// Lines a reviewer has to read: added plus removed.
+    pub fn lines(&self) -> u64 {
+        self.additions + self.deletions
+    }
 }
 
 impl PullRequest {
@@ -62,6 +78,12 @@ struct RawPr {
     mergeable_state: Option<String>,
     #[serde(default)]
     labels: Vec<RawLabel>,
+    #[serde(default)]
+    additions: u64,
+    #[serde(default)]
+    deletions: u64,
+    #[serde(default)]
+    changed_files: u64,
 }
 
 #[derive(Deserialize)]
@@ -106,6 +128,11 @@ pub async fn pull_request(gh: &GitHub, repo: &Repo, number: u64) -> Result<PullR
         draft: pr.draft,
         mergeable_state: pr.mergeable_state,
         labels: pr.labels.into_iter().map(|l| l.name).collect(),
+        size: PrSize {
+            additions: pr.additions,
+            deletions: pr.deletions,
+            files: pr.changed_files,
+        },
     })
 }
 
@@ -250,6 +277,8 @@ pub struct History {
     pub conflicts: HashSet<String>,
     /// Heads whose failing CI was already pointed out.
     pub ci: HashSet<String>,
+    /// Heads at which the author was asked to split the pull request.
+    pub splits: HashSet<String>,
 }
 
 pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
@@ -272,6 +301,10 @@ pub async fn history(gh: &GitHub, repo: &Repo, number: u64) -> Result<History> {
             .flat_map(|b| marker_values(b, "conflict"))
             .collect(),
         ci: bodies.iter().flat_map(|b| marker_values(b, "ci")).collect(),
+        splits: bodies
+            .iter()
+            .flat_map(|b| marker_values(b, "split"))
+            .collect(),
     })
 }
 
@@ -656,6 +689,106 @@ pub async fn resolve_thread(gh: &GitHub, thread_id: &str) -> Result<()> {
         .query(
             "mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { id } } }",
             json!({ "id": thread_id }),
+        )
+        .await?;
+    Ok(())
+}
+
+/// A review summary dify-review posted (it carries the head marker).
+#[derive(Debug, Clone)]
+pub struct BotReview {
+    pub node_id: String,
+    pub body: String,
+    /// It left inline suggestions: never folded, they are what to act on.
+    pub has_inline: bool,
+    pub minimized: bool,
+}
+
+const BOT_REVIEWS_QUERY: &str = r#"
+query($owner: String!, $name: String!, $number: Int!) {
+  rateLimit { cost remaining resetAt }
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      reviews(last: 100) {
+        nodes { id body isMinimized comments { totalCount } }
+      }
+    }
+  }
+}
+"#;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BotReviewsData {
+    rate_limit: Option<crate::client::RateLimit>,
+    repository: Option<BotReviewsRepo>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BotReviewsRepo {
+    pull_request: Option<BotReviewsPr>,
+}
+#[derive(Deserialize)]
+struct BotReviewsPr {
+    reviews: Nodes<RawBotReview>,
+}
+#[derive(Deserialize)]
+struct Nodes<T> {
+    nodes: Vec<T>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawBotReview {
+    id: String,
+    #[serde(default)]
+    body: String,
+    is_minimized: bool,
+    comments: Count,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Count {
+    total_count: u64,
+}
+
+impl crate::client::HasRateLimit for BotReviewsData {
+    fn rate_limit(&self) -> Option<&crate::client::RateLimit> {
+        self.rate_limit.as_ref()
+    }
+}
+
+/// dify-review's review summaries on the pull request, oldest first.
+pub async fn bot_reviews(gh: &GitHub, repo: &Repo, number: u64) -> Result<Vec<BotReview>> {
+    let d: BotReviewsData = gh
+        .query(
+            BOT_REVIEWS_QUERY,
+            json!({ "owner": repo.owner(), "name": repo.name(), "number": number }),
+        )
+        .await?;
+    let reviews = d
+        .repository
+        .and_then(|r| r.pull_request)
+        .with_context(|| format!("pull request {number} not found"))?
+        .reviews
+        .nodes;
+    Ok(reviews
+        .into_iter()
+        .filter(|r| !marker_values(&r.body, "head").is_empty())
+        .map(|r| BotReview {
+            node_id: r.id,
+            body: r.body,
+            has_inline: r.comments.total_count > 0,
+            minimized: r.is_minimized,
+        })
+        .collect())
+}
+
+/// Fold a review as outdated. Its body, and the markers in it, stay.
+pub async fn minimize(gh: &GitHub, node_id: &str) -> Result<()> {
+    let _: Resolved = gh
+        .query(
+            "mutation($id: ID!) { minimizeComment(input: {subjectId: $id, classifier: OUTDATED}) { minimizedComment { isMinimized } } }",
+            json!({ "id": node_id }),
         )
         .await?;
     Ok(())
